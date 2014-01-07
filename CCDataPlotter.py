@@ -185,7 +185,7 @@ class GraphFrame(wx.Frame):
         #
         self.plot_data = self.axes.plot(
             self.dataStore.getData(self.variableToPlot), 
-            linewidth=1,
+            linewidth=2,
             color=(1, 0, 0),
             )[0]
 
