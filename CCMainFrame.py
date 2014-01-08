@@ -92,6 +92,7 @@ class CCMainFrame(wx.Frame):
         self.label_11 = wx.StaticText(self.notebook_logging, wx.ID_ANY, _("Data Logging Configuration"))
         self.button_select_logfile = wx.Button(self.notebook_logging, wx.ID_ANY, _("Select Logfile"))
         self.label_active_log_file = wx.StaticText(self.notebook_logging, wx.ID_ANY, _("./log.txt"))
+        self.logging_active_button = wx.ToggleButton(self.notebook_logging, wx.ID_ANY, _("Activate Logging"))
         self.notebook_reference_values = wx.Panel(self.notebook_main, wx.ID_ANY)
         self.label_1_copy_copy_copy = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Captor Control"))
         self.label_12 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Reference Value Measurement"))
@@ -152,14 +153,24 @@ class CCMainFrame(wx.Frame):
         self.label_1_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_9.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.serial_connection_combo_box.SetMinSize((250, -1))
+        self.serial_connection_combo_box.SetToolTipString(_("Select serial connection of the reactor"))
         self.button_connect_serial.SetMinSize((94, 20))
+        self.button_connect_serial.SetToolTipString(_("Establish connection to Reactor"))
+        self.button_refresh_serial_copy.SetToolTipString(_("Refresh list of available serial connections "))
         self.label_1_copy_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_11.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
+        self.button_select_logfile.SetToolTipString(_("File which stores data permanently"))
+        self.logging_active_button.SetToolTipString(_("Activate to start writing data to Log File"))
         self.label_1_copy_copy_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.button_measure_refs.SetMinSize((200, 20))
+        self.button_measure_refs.SetToolTipString(_("Reference OD of culture chamber and medium only"))
         self.label_dynLightTitle.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_14.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.dyn_light_filepath_label.SetMinSize((250, -1))
+        self.button_ld_dynlght_copy_copy.SetToolTipString(_("Text file holding the light/duration tuples"))
+        self.button_plotDynLight_copy_copy.SetToolTipString(_("display plot of loaded program"))
+        self.button_uld_dynlght_copy_copy.SetToolTipString(_("transfer loaded program to reactor"))
+        self.button_dld_dynlght_copy_copy.SetToolTipString(_("retrieve program curretly on the reactor"))
         self.label_1_copy_copy_copy_copy_2.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         # end wxGlade
 
@@ -198,6 +209,7 @@ class CCMainFrame(wx.Frame):
         sizer_19.Add(self.label_11, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_20.Add(self.button_select_logfile, 0, wx.ALL, 10)
         sizer_20.Add(self.label_active_log_file, 0, wx.ALL, 10)
+        sizer_20.Add(self.logging_active_button, 0, 0, 0)
         sizer_19.Add(sizer_20, 1, wx.EXPAND, 0)
         sizer_logging_main.Add(sizer_19, 1, wx.EXPAND, 0)
         self.notebook_logging.SetSizer(sizer_logging_main)
@@ -464,6 +476,9 @@ class CCMainFrame(wx.Frame):
 
     def logData(self):
         """write sample to log file"""
+        # check if logging to file is activated, otherwise do nothing...
+        if not self.logging_active_button.GetValue():
+            return
         ls = self.assmebleLogString()
         with open(self.label_active_log_file.GetLabel(), 'a') as f:
             f.write(ls)
@@ -535,6 +550,9 @@ class CCMainFrame(wx.Frame):
             # add combo box in main frame
             self.serial_connection_combo_box.Append(path)
 
+    def OnActivateLoggingButtonClicked(self, event):  # wxGlade: CCMainFrame.<event_handler>
+        print "Event handler 'OnActivateLoggingButtonClicked' not implemented!"
+        event.Skip()
 # end of class CCMainFrame
 
 class DataStore(object):

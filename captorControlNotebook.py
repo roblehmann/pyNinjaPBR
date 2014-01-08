@@ -55,9 +55,17 @@ class captorControlNotebook(wx.Panel):
     def __set_properties(self):
         # begin wxGlade: captorControlNotebook.__set_properties
         self.label_6.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
+        self.mode_radio_box.SetToolTipString(_("Available reactor operation modes"))
         self.mode_radio_box.SetSelection(0)
+        self.text_ctrl_min_led_bght.SetToolTipString(_("Minimal Brightness"))
+        self.text_ctrl_max_led_bght.SetToolTipString(_("Maximal brightness value"))
+        self.text_ctrl_sampling_rate.SetToolTipString(_("Duration between OD samples in seconds"))
+        self.button_odPlot.SetToolTipString(_("Open plot of available OD values "))
+        self.mode_schedule_combo_box.SetToolTipString(_("Select which mode to switch into"))
         self.mode_schedule_combo_box.SetSelection(-1)
+        self.text_ctrl_mode_change_time.SetToolTipString(_("Time to switch mode specified above"))
         self.button_turbidostat_mode.SetMinSize((140, 20))
+        self.button_turbidostat_mode.SetToolTipString(_("Toogle turbidotat mode"))
         # end wxGlade
 
     def __do_layout(self):
