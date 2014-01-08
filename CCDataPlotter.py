@@ -109,6 +109,9 @@ class GraphFrame(wx.Frame):
         self.clear_button = wx.Button(self.panel, -1, "Clear")
         self.Bind(wx.EVT_BUTTON, self.on_clear_button, self.clear_button)
         
+        self.redraw_button = wx.Button(self.panel, -1, "Redraw")
+        self.Bind(wx.EVT_BUTTON, self.on_redraw_button, self.redraw_button)
+        
         self.cb_grid = wx.CheckBox(self.panel, -1, 
             "Show Grid",
             style=wx.ALIGN_RIGHT)
@@ -124,6 +127,8 @@ class GraphFrame(wx.Frame):
         self.hbox1 = wx.BoxSizer(wx.HORIZONTAL)
         self.hbox1.Add(self.select_variable_button, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
         self.hbox1.AddSpacer(20)
+        self.hbox1.Add(self.redraw_button, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
+        self.hbox1.AddSpacer(10)
         self.hbox1.Add(self.clear_button, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
         self.hbox1.AddSpacer(10)
         self.hbox1.Add(self.cb_grid, border=5, flag=wx.ALL | wx.ALIGN_CENTER_VERTICAL)
@@ -280,10 +285,16 @@ class GraphFrame(wx.Frame):
             vn = dlg.GetStringSelection()
             self.variableToPlot = vn
         dlg.Destroy()
+        self.draw_plot()
+        
+    def on_redraw_button(self, event):
+        """refresh plot"""
+        self.draw_plot()
         
     def on_clear_button(self, event):
         """clear plot by removing all data from datastore"""
         self.dataStore.clear()
+        self.draw_plot()
         
     def on_cb_grid(self, event):
         self.draw_plot()
