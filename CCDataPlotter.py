@@ -73,7 +73,10 @@ class GraphFrame(wx.Frame):
         self.parent     = parent
         self.dataStore    = dataStore
         if variableToPlot == None:
-            variableToPlot = self.dataStore.data.keys()[0]
+            if self.dataStore != None:
+                variableToPlot = self.dataStore.data.keys()[0]
+            else:
+                variableToPlot = ''
         self.variableToPlot = variableToPlot # name of variable to plot, for access in DataStore
         self.create_menu()
         self.create_status_bar()
@@ -188,23 +191,24 @@ class GraphFrame(wx.Frame):
         # plot the data as a line series, and save the reference 
         # to the plotted line series
         #
-        self.plot_data = self.axes.plot(
-            self.dataStore.getData(self.variableToPlot), 
-            linewidth=2,
-            color=(1, 0, 0),
-            )[0]
+        if self.dataStore != None:
+            self.plot_data = self.axes.plot(
+                self.dataStore.getData(self.variableToPlot), 
+                linewidth=2,
+                color=(1, 0, 0),
+                )[0]
 
-        self.bght_plot_data = self.axes2.plot(
-            self.dataStore.getData("Brightness"), 
-            linewidth=1,
-            color=(1, 1, 0),
-            )[0]
+            self.bght_plot_data = self.axes2.plot(
+                self.dataStore.getData("Brightness"), 
+                linewidth=1,
+                color=(1, 1, 0),
+                )[0]
 
-        self.temp_plot_data = self.axes3.plot(
-            self.dataStore.getData("Temperature"), 
-            linewidth=1,
-            color=(0, 1, 0),
-            )[0]
+            self.temp_plot_data = self.axes3.plot(
+                self.dataStore.getData("Temperature"), 
+                linewidth=1,
+                color=(0, 1, 0),
+                )[0]
 
         
     def draw_plot(self):
@@ -279,7 +283,7 @@ class GraphFrame(wx.Frame):
     
     def on_select_var_button(self, event):
         """select variable to plot"""
-        dlg = wx.SingleChoiceDialog(self, "Select OD to plot", "...",self.dataStore.data.keys(), wx.CHOICEDLG_STYLE)
+        dlg = wx.SingleChoiceDialog(self, "Select OD to plot", "...",sorted(self.dataStore.data.keys()), wx.CHOICEDLG_STYLE)
 
         if dlg.ShowModal() == wx.ID_OK:
             vn = dlg.GetStringSelection()

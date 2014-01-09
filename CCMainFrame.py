@@ -39,11 +39,10 @@ msgTerm = "#"
 
 DEBUG = True
 # names of values obtained from the reactor
-VARIABLE_NAMES = ["OD850nm_s1","OD740nm_s1","ODred_s1","ODgreen_s1","ODblue_s1",
-    "OD850nm_s2","OD740nm_s2","ODred_s2","ODgreen_s2","ODblue_s2",
-    "Brightness","Temperature"]
+CHANNEL_NAMES = ["OD850nm","OD740nm","ODred","ODgreen","ODblue"]
+
 # max. number of samples to show in plot
-BUFFER_SIZE = 1000
+BUFFER_SIZE = 5000
 
 class CCMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -73,7 +72,7 @@ class CCMainFrame(wx.Frame):
         self.dynLightPlotFrame = None
         # frame showing real time plot of OD curve
         self.odCurveFrame = None
-        self.dataStore    = DataStore(BUFFER_SIZE,VARIABLE_NAMES)
+        self.dataStore    = None
         
         # begin wxGlade: CCMainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
@@ -135,6 +134,7 @@ class CCMainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnOpenConnectReactorButton, self.button_connect_serial)
         self.Bind(wx.EVT_BUTTON, self.OnOpenRefreshReactorListButton, self.button_refresh_serial_copy)
         self.Bind(wx.EVT_BUTTON, self.OnOpenLogfileDialogButton, self.button_select_logfile)
+        self.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivateLoggingButtonClicked, self.logging_active_button)
         self.Bind(wx.EVT_BUTTON, self.OnOpenMeasureRefValsButton, self.button_measure_refs)
         self.Bind(wx.EVT_BUTTON, self.OnOpenDynLightFileDialogButton, self.button_ld_dynlght_copy_copy)
         self.Bind(wx.EVT_BUTTON, self.OnShowDynLightClicked, self.button_plotDynLight_copy_copy)
@@ -305,18 +305,19 @@ class CCMainFrame(wx.Frame):
     def OnSerialRead(self, event):
         """Handle input from the serial port."""
         text = event.data
+        dataSections = text.split(";")
         if DEBUG:
             print "received reactor message: " + text
-        vals = text.split(",")
+        
         # reference values
-        if vals[0] == "REF": 
-            self.digestReferenceValues(vals[1:])
-        elif vals[0] == "MD": 
-            self.digestReactorModeValues(vals[1:])
-        elif vals[0] == "DATA": # sample data
-            self.digestSampleValues(vals[1:])
+        if dataSections[0] == "REF": 
+            self.digestReferenceValues(dataSections)
+        elif dataSections[0] == "MD": # received updated reactor mode
+            self.digestReactorModeValues(dataSections)
+        elif dataSections[0] == "DATA": # received sample data
+            self.digestSampleValues(dataSections)
         else:
-            print "Unknown Reactor Message " + vals[0] + "!"
+            print "Unknown Reactor Message " + dataSections[0] + "!"
             if DEBUG:
                 print text
                     
@@ -426,42 +427,66 @@ class CCMainFrame(wx.Frame):
         self.dynLightPlotFrame.draw()
         self.dynLightPlotFrame.Show()
 
-    def digestReferenceValues(self, values):
+    def digestReferenceValues(self, dataSections):
         """parses OD reference values sent from reactor, updates gui"""
-        # store ref data 
-        for i in range(0,5):
-            if DEBUG:
-                print "parsing values" + values[i] + " and " + values[i+5] 
-            self.referenceVals1[i] = float(values[i])
-            self.referenceVals2[i] = float(values[(i+5)])
+        values = dataSections[1].split(",")
+        nChambers = len(values) / 10 # five wavelengths per culture chamber and two sensors (5 * 2)
+        self.referenceVals1 = []
+        self.referenceVals2 = []
+        # store ref data
+        for iChamber in range(0,nChambers):
+            for i in range(0,5):
+                offset = iChamber*10
+                if DEBUG:
+                    print "parsing values" + values[i+offset] + " and " + values[i + offset + 5] 
+                self.referenceVals1.append( float(values[i+offset]) )
+                self.referenceVals2.append( float(values[(i+offset+5)]) )
         self.updateReactorData()
 
-    def digestReactorModeValues(self, values):
+    def digestReactorModeValues(self, dataSections):
         """parses mode change sent from reactor, updates gui"""
-        newMode = int(values[0])
+        value = dataSections[1].replace(',','')
+        newMode = int(value)
         if DEBUG:
             print "detected reactor mode change to:" + str(newMode)
         self.notebook_1_pane_1.mode_radio_box.SetSelection(newMode)
 
-    def digestSampleValues(self, values):
+    def digestSampleValues(self, dataSections):
         """parses sample values sent from reactor, updates gui and writes to log file"""
         if DEBUG:
             print "parsing sample data"
-        # od values
-        for i in range(0,5):
-            self.odVals1[i] = float(values[i])
-            self.odVals2[i] = float(values[(i+5)])
+        
+        values = dataSections[1].split(",")
+        nChambers = len(values) / 10 # five wavelengths per culture chamber and two sensors (5 * 2)
+        self.odVals1 = []
+        self.odVals2 = []
+
+        # store OD data
+        for iChamber in range(0,nChambers):
+            for i in range(0,5):
+                offset = iChamber * 10
+                self.odVals1.append( float( values[i+offset] ) )
+                self.odVals2.append( float( values[(i+offset+5)] ) )
 
         # background values for both detectors
-        self.bgVals[0]     = float(values[10])
-        self.bgVals[1]     = float(values[11])
-        # sample temperature
-        self.temp          = float(values[12])
-        self.lightBrightness = int(values[13])
-        self.reactorMode   = int(values[14])
-        self.minLight      = int(values[15])
-        self.maxLight      = int(values[16])
-        self.sampleRate    = int(values[17])
+        bgValues = dataSections[2].split(",")
+        self.bgVals = []
+        if DEBUG:
+            print 'detected number of culture chambers:' + str(nChambers)
+
+        for iChamber in range(0,nChambers):
+                offset = iChamber * 2
+                self.bgVals.append( float(bgValues[offset]) )
+                self.bgVals.append( float(bgValues[offset+1]) )
+
+        # other parameters
+        otherValues = dataSections[3].split(",")
+        self.temp          = float(otherValues[0])
+        self.lightBrightness = int(otherValues[1])
+        self.reactorMode   = int(otherValues[2])
+        self.minLight      = int(otherValues[3])
+        self.maxLight      = int(otherValues[4])
+        self.sampleRate    = int(otherValues[5])
         self.sampleTime    = datetime.now().strftime('%Y/%m/%d/%H/%M/%S')
         # show in gui
         self.updateReactorData()
@@ -469,7 +494,14 @@ class CCMainFrame(wx.Frame):
         self.logData()
         # add data to datastore
         dt = self.odVals1 + self.odVals2 + [self.lightBrightness, self.temp]
-        self.dataStore.addSample(dt, VARIABLE_NAMES)
+        # check if data store already initialized, otherwise do so
+        if(self.dataStore == None):
+            # assemble list of variable names
+            self.VARIABLE_NAMES = [cn+'_ch'+str(i)+'_s'+str(j) for j in range(1,3) for i in range(0,nChambers) for cn in CHANNEL_NAMES ] 
+            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Brightness","Temperature"]
+            self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
+        # save data
+        self.dataStore.addSample(dt, self.VARIABLE_NAMES)
         # if activated, refresh OD curve plot
         if not self.odCurveFrame == None:
             self.odCurveFrame.draw_plot()
@@ -480,14 +512,18 @@ class CCMainFrame(wx.Frame):
         if not self.logging_active_button.GetValue():
             return
         ls = self.assmebleLogString()
+        self.writeToLog(ls)
+
+    def writeToLog(self,value):
+        """writes variable to log file"""
         with open(self.label_active_log_file.GetLabel(), 'a') as f:
-            f.write(ls)
+            f.write(value)
 
     def assmebleLogString(self):
         """combines last sample values into a log string"""
         ls = ""
         ls2 = ""
-        for i in range(0,5):
+        for i in range(0,len(self.odVals1)):
             ls +=   str(self.odVals1[i])    + msgSep
             ls2 +=  str(self.odVals2[i])    + msgSep
         ls = str(self.sampleTime) + msgSep + ls + ls2
@@ -551,8 +587,17 @@ class CCMainFrame(wx.Frame):
             self.serial_connection_combo_box.Append(path)
 
     def OnActivateLoggingButtonClicked(self, event):  # wxGlade: CCMainFrame.<event_handler>
-        print "Event handler 'OnActivateLoggingButtonClicked' not implemented!"
-        event.Skip()
+        """logging only permitted with connected reactor and data store created.
+        on activation the headerline with parameter names is added to the log file"""
+        if not self.serial.isOpen() or self.dataStore == None:
+            msgbox = wx.MessageBox('Need to connect reactor and start sampling before logging can be activated!', 
+                                   'Alert', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            # deactivate logging again
+            self.logging_active_button.SetValue(False)
+            return
+        logHeader = '#' + ','.join(self.VARIABLE_NAMES)
+        self.writeToLog(logHeader)
+
 # end of class CCMainFrame
 
 class DataStore(object):
