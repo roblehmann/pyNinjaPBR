@@ -283,7 +283,10 @@ class GraphFrame(wx.Frame):
     
     def on_select_var_button(self, event):
         """select variable to plot"""
-        dlg = wx.SingleChoiceDialog(self, "Select OD to plot", "...",sorted(self.dataStore.data.keys()), wx.CHOICEDLG_STYLE)
+        varNames = sorted(self.dataStore.data.keys())
+        varNames.remove("Time")
+        varNames.remove("Brightness")
+        dlg = wx.SingleChoiceDialog(self, "Select OD to plot", "...",varNames, wx.CHOICEDLG_STYLE)
 
         if dlg.ShowModal() == wx.ID_OK:
             vn = dlg.GetStringSelection()

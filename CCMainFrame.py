@@ -39,7 +39,7 @@ msgTerm = "#"
 
 DEBUG = True
 # names of values obtained from the reactor
-CHANNEL_NAMES = ["OD850nm","OD740nm","ODred","ODgreen","ODblue"]
+CHANNEL_NAMES = ["OD850nm","OD740nm","OD625nm","OD520nm","OD470nm"]
 
 # max. number of samples to show in plot
 BUFFER_SIZE = 5000
@@ -493,12 +493,13 @@ class CCMainFrame(wx.Frame):
         # write to log file
         self.logData()
         # add data to datastore
-        dt = self.odVals1 + self.odVals2 + [self.lightBrightness, self.temp]
+        dt = [self.sampleTime] + self.odVals1 + self.odVals2 + [self.temp, self.lightBrightness, self.reactorMode]
         # check if data store already initialized, otherwise do so
         if(self.dataStore == None):
             # assemble list of variable names
-            self.VARIABLE_NAMES = [cn+'_ch'+str(i)+'_s'+str(j) for j in range(1,3) for i in range(0,nChambers) for cn in CHANNEL_NAMES ] 
-            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Brightness","Temperature"]
+            self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i) + '_s' + str(j) 
+						for i in range(0,nChambers) for j in range(0,2) for cn in CHANNEL_NAMES ]
+            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Temperature", "Brightness", "ReactorMode"]
             self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
         # save data
         self.dataStore.addSample(dt, self.VARIABLE_NAMES)
@@ -595,7 +596,9 @@ class CCMainFrame(wx.Frame):
             # deactivate logging again
             self.logging_active_button.SetValue(False)
             return
-        logHeader = '#' + ','.join(self.VARIABLE_NAMES)
+        if not self.logging_active_button.GetValue():
+            return
+        logHeader = '#' + ','.join(self.VARIABLE_NAMES)  + "\n"
         self.writeToLog(logHeader)
 
 # end of class CCMainFrame
