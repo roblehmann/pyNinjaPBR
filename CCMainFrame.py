@@ -40,6 +40,8 @@ msgTerm = "#"
 DEBUG = True
 # names of values obtained from the reactor
 CHANNEL_NAMES = ["OD850nm","OD740nm","OD625nm","OD520nm","OD470nm"]
+# number of Brightness/duration tuples stored in the reactor as dynamic light program
+maxDynLightLen = 199
 
 # max. number of samples to show in plot
 BUFFER_SIZE = 5000
@@ -316,6 +318,8 @@ class CCMainFrame(wx.Frame):
             self.digestReactorModeValues(dataSections)
         elif dataSections[0] == "DATA": # received sample data
             self.digestSampleValues(dataSections)
+        elif dataSections[0] == "LP": # received light profile 
+            self.digestLightProfile(dataSections)
         else:
             print "Unknown Reactor Message " + dataSections[0] + "!"
             if DEBUG:
@@ -404,15 +408,21 @@ class CCMainFrame(wx.Frame):
         if DEBUG:
             print "Parsed dynamic light program from " + fp + " (rows " + str(len(self.dynLight)) + ")..."
         self.dyn_light_filepath_label.SetLabel(fp)
-        
+    
     def OnOpenUploadDynLightButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
         """sends the dynamic light program to the reactor"""
         if self.dynLight == None:
             print "No dynamic light program loaded!"
             return
-        
         for i,item in enumerate(self.dynLight):
             self.sendMessage("bp",str(i) + msgSep + str(item[0]) + msgSep + str(item[1]) + msgSep)
+
+        # if dynamic light program is shorter that te max. length, there might be remaining 
+        # entries from the old program in the reactors memory, which need to be overwritten
+        if len(self.dynLight) < maxDynLightLen:
+            for i in range(len(self.dynLight), maxDynLightLen+1):
+                self.sendMessage("bp",str(i) + msgSep + '0' + msgSep + '0' + msgSep)
+            
 
     def OnOpenDownloadDynLightButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
         """sends command to reactor to answer with current dynamic light program.
@@ -506,6 +516,17 @@ class CCMainFrame(wx.Frame):
         # if activated, refresh OD curve plot
         if not self.odCurveFrame == None:
             self.odCurveFrame.draw_plot()
+
+    def digestLightProfile(self, dataSections):
+        """parses light profile values sent from reactor"""
+        values = dataSections[1].split(",")
+        dl = []
+        for i in range(0,len(values)-1,2):
+            item = [long(x) for x in values[i:(i+2)]]
+            if not (item[0] < 0 or item[1] < 0):
+                dl.append(item)
+        if len(dl) > 0:
+            self.dynLight = dl
 
     def logData(self):
         """write sample to log file"""
