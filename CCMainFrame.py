@@ -506,19 +506,21 @@ class CCMainFrame(wx.Frame):
         self.sampleTime    = datetime.now().strftime('%Y/%m/%d/%H/%M/%S')
         # show in gui
         self.updateReactorData()
-        # write to log file
-        self.logData()
         # add data to datastore
         dt = [self.sampleTime] + self.odVals1 + self.odVals2 + [self.temp, self.lightBrightness, self.reactorMode]
         # check if data store already initialized, otherwise do so
         if(self.dataStore == None):
             # assemble list of variable names
             self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i) + '_s' + str(j) 
-						for i in range(0,nChambers) for j in range(0,2) for cn in CHANNEL_NAMES ]
+						for j in range(0,2) for i in range(0,nChambers) for cn in CHANNEL_NAMES ]
             self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Temperature", "Brightness", "ReactorMode"]
             self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
         # save data
         self.dataStore.addSample(dt, self.VARIABLE_NAMES)
+        
+        # write to log file
+        self.logData(dt)
+        
         # if activated, refresh OD curve plot
         if not self.odCurveFrame == None:
             self.odCurveFrame.draw_plot()
@@ -534,12 +536,12 @@ class CCMainFrame(wx.Frame):
         if len(dl) > 0:
             self.dynLight = dl
 
-    def logData(self):
+    def logData(self, data):
         """write sample to log file"""
         # check if logging to file is activated, otherwise do nothing...
         if not self.logging_active_button.GetValue():
             return
-        ls = self.assmebleLogString()
+        ls = self.assmebleLogString(str(x) for x in data)
         self.writeToLog(ls)
 
     def writeToLog(self,value):
@@ -547,15 +549,9 @@ class CCMainFrame(wx.Frame):
         with open(self.label_active_log_file.GetLabel(), 'a') as f:
             f.write(value)
 
-    def assmebleLogString(self):
+    def assmebleLogString(self, data):
         """combines last sample values into a log string"""
-        ls = ""
-        ls2 = ""
-        for i in range(0,len(self.odVals1)):
-            ls +=   str(self.odVals1[i])    + msgSep
-            ls2 +=  str(self.odVals2[i])    + msgSep
-        ls = str(self.sampleTime) + msgSep + ls + ls2
-        ls = ls + str(self.temp) + msgSep + str(self.lightBrightness) + msgSep + str(self.reactorMode) + "\n"
+        ls = msgSep.join(data) + '\n'
         return ls
 
     def updateReactorData(self):
@@ -648,6 +644,8 @@ class DataStore(object):
         # adds data to the according queues, in the order of the provided names
         for i,varNm in enumerate(vn):
             self.data[varNm].append(data[i])
+            if DEBUG:
+                print 'adding to "' + varNm + '"value: ' + str(data[i]) + '\n'
             if len(self.data[varNm]) > self.plotL:
                 self.data[varNm].popleft()
 
