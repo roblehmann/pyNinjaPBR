@@ -13,6 +13,7 @@ from serial.tools import list_ports
 import sys
 import threading
 import wx
+import ConfigParser
 # begin wxGlade: dependencies
 from captorControlNotebook import captorControlNotebook
 # end wxGlade
@@ -34,20 +35,25 @@ EVT_SERIALRX = wx.PyEventBinder(SERIALRX, 0)
 ID_SETTINGS     = wx.NewId()
 ID_EXIT         = wx.NewId()
 
-msgSep = ","
-msgTerm = "#"
 
-DEBUG = True
+config = ConfigParser.RawConfigParser()
+config.read('./pyCaptorConfig.cfg')
+# read logging section
+msgSep = config.get('logging', 'msgSep')
+msgTerm = config.get('logging', 'msgTerm')
+DEBUG = config.getboolean('logging', 'DEBUG')
 # names of values obtained from the reactor
-CHANNEL_NAMES = ["OD850nm","OD740nm","OD625nm","OD520nm","OD470nm"]
-# number of Brightness/duration tuples stored in the reactor as dynamic light program
-maxDynLightLen = 199
-
+CHANNEL_NAMES = config.get('logging', 'CHANNEL_NAMES').split(',')
+# read plot section
 # max. number of samples to show in plot
-BUFFER_SIZE = 5000
+BUFFER_SIZE = config.getint('plotting', 'BUFFER_SIZE')
+# read dynamicLight section
+# number of Brightness/duration tuples stored in the reactor as dynamic light program
+maxDynLightLen = config.getint('dynamicLight', 'maxDynLightLen')
 
 class CCMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
+        
         self.serial     = serial.Serial()
         self.serial.timeout = 0.5   #make sure that the alive event can be checked from time to time
         self.thread     = None
