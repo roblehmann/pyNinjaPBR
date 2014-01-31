@@ -644,8 +644,8 @@ class DataStore(object):
         # adds data to the according queues, in the order of the provided names
         for i,varNm in enumerate(vn):
             self.data[varNm].append(data[i])
-            if DEBUG:
-                print 'adding to "' + varNm + '"value: ' + str(data[i]) + '\n'
+            # if DEBUG:
+            #     print 'adding to "' + varNm + '"value: ' + str(data[i]) + '\n'
             if len(self.data[varNm]) > self.plotL:
                 self.data[varNm].popleft()
 
