@@ -63,10 +63,8 @@ class CCMainFrame(wx.Frame):
         self.dataFrame.Show()
         # reactor data
         self.referenceVals1 = [5,5,5,5,5]  # reference values from detector 1
-        self.referenceVals2 = [5,5,5,5,5]  # reference values from detector 2 
         self.odVals1    = [0,0,0,0,0] # od values from detector 1
-        self.odVals2    = [0,0,0,0,0] # od values from detector 2
-        self.bgVals     = [0,0] # background values for both detectors
+        self.bgVals     = 0 # background values for both detectors
         self.temp       = 0 # sample temperature
         self.lightBrightness = 0
         self.reactorMode    = 1
@@ -446,17 +444,13 @@ class CCMainFrame(wx.Frame):
     def digestReferenceValues(self, dataSections):
         """parses OD reference values sent from reactor, updates gui"""
         values = dataSections[1].split(",")
-        nChambers = len(values) / 10 # five wavelengths per culture chamber and two sensors (5 * 2)
+        nChambers = len(values) / 5 # five wavelengths per culture chamber
         self.referenceVals1 = []
-        self.referenceVals2 = []
         # store ref data
         for iChamber in range(0,nChambers):
+            offset = iChamber * 5
             for i in range(0,5):
-                offset = iChamber*10
-                if DEBUG:
-                    print "parsing values" + values[i+offset] + " and " + values[i + offset + 5] 
                 self.referenceVals1.append( float(values[i+offset]) )
-                self.referenceVals2.append( float(values[(i+offset+5)]) )
         self.updateReactorData()
 
     def digestReactorModeValues(self, dataSections):
@@ -473,27 +467,24 @@ class CCMainFrame(wx.Frame):
             print "parsing sample data"
         
         values = dataSections[1].split(",")
-        nChambers = len(values) / 10 # five wavelengths per culture chamber and two sensors (5 * 2)
+        nChambers = len(values) / 5 # five wavelengths per culture chamber
+        if DEBUG:
+            print 'detected number of culture chambers:' + str(nChambers)
+            
         self.odVals1 = []
-        self.odVals2 = []
+        self.bgVals = []
 
         # store OD data
         for iChamber in range(0,nChambers):
+            offset = iChamber * 5
             for i in range(0,5):
-                offset = iChamber * 10
                 self.odVals1.append( float( values[i+offset] ) )
-                self.odVals2.append( float( values[(i+offset+5)] ) )
 
         # background values for both detectors
         bgValues = dataSections[2].split(",")
-        self.bgVals = []
-        if DEBUG:
-            print 'detected number of culture chambers:' + str(nChambers)
 
         for iChamber in range(0,nChambers):
-                offset = iChamber * 2
-                self.bgVals.append( float(bgValues[offset]) )
-                self.bgVals.append( float(bgValues[offset+1]) )
+                self.bgVals.append( float(bgValues[iChamber]) )
 
         # other parameters
         otherValues = dataSections[3].split(",")
@@ -507,12 +498,12 @@ class CCMainFrame(wx.Frame):
         # show in gui
         self.updateReactorData()
         # add data to datastore
-        dt = [self.sampleTime] + self.odVals1 + self.odVals2 + [self.temp, self.lightBrightness, self.reactorMode]
+        dt = [self.sampleTime] + self.odVals1 + [self.temp, self.lightBrightness, self.reactorMode]
         # check if data store already initialized, otherwise do so
         if(self.dataStore == None):
             # assemble list of variable names
-            self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i) + '_s' + str(j) 
-						for j in range(0,2) for i in range(0,nChambers) for cn in CHANNEL_NAMES ]
+            self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i)
+						for i in range(0,nChambers) for cn in CHANNEL_NAMES ]
             self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Temperature", "Brightness", "ReactorMode"]
             self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
         # save data
@@ -558,25 +549,19 @@ class CCMainFrame(wx.Frame):
         """updates gui with current sample data"""
         # show data in gui
         self.label_od850_1.SetLabel(str(self.referenceVals1[0]))
-        self.label_od850_2.SetLabel(str(self.referenceVals2[0]))
         self.label_od740_1.SetLabel(str(self.referenceVals1[1]))
-        self.label_od740_2.SetLabel(str(self.referenceVals2[1]))
         self.label_odRed_1.SetLabel(str(self.referenceVals1[2]))
-        self.label_odRed_2.SetLabel(str(self.referenceVals2[2]))
         self.label_odGreen_1.SetLabel(str(self.referenceVals1[3]))
-        self.label_odGreen_2.SetLabel(str(self.referenceVals2[3]))
         self.label_odBlue_1.SetLabel(str(self.referenceVals1[4]))
-        self.label_odBlue_2.SetLabel(str(self.referenceVals2[4]))
 
-        self.dataFrame.od_850_label.SetLabel(str(self.odVals2[0]))
-        self.dataFrame.od_740_label.SetLabel(str(self.odVals2[1]))
+        self.dataFrame.od_850_label.SetLabel(str(self.odVals1[0]))
+        self.dataFrame.od_740_label.SetLabel(str(self.odVals1[1]))
         self.dataFrame.od_red_label.SetLabel(str(self.odVals1[2]))
         self.dataFrame.od_green_label.SetLabel(str(self.odVals1[3]))
         self.dataFrame.od_blue_label.SetLabel(str(self.odVals1[4]))
 
-        # background values for detector 1
-        self.dataFrame.background_od_label.SetLabel(str(self.bgVals[0]))
-        # self.bgVals[1] # detector 2
+        # background values for detector
+        self.dataFrame.background_od_label.SetLabel(str(self.bgVals))
         # sample temperature
         self.dataFrame.temp_label.SetLabel(str(self.temp))
         # brightness
