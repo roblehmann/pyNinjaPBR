@@ -498,12 +498,13 @@ class CCMainFrame(wx.Frame):
         # show in gui
         self.updateReactorData()
         # add data to datastore
-        dt = [self.sampleTime] + self.odVals1 + [self.temp, self.lightBrightness, self.reactorMode]
+        dt = [self.sampleTime] + self.odVals1 + bgValues + [self.temp, self.lightBrightness, self.reactorMode]
         # check if data store already initialized, otherwise do so
         if(self.dataStore == None):
             # assemble list of variable names
             self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i)
 						for i in range(0,nChambers) for cn in CHANNEL_NAMES ]
+            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ['bg_ch' + str(i) for i in range(0,nChambers)]
             self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Temperature", "Brightness", "ReactorMode"]
             self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
         # save data
