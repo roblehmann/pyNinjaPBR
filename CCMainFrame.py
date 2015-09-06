@@ -54,19 +54,21 @@ maxDynLightLen = config.getint('dynamicLight', 'maxDynLightLen')
 class CCMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         
-        self.serial     = serial.Serial()
+        self.serial         = serial.Serial()
         self.serial.timeout = 0.5   #make sure that the alive event can be checked from time to time
-        self.thread     = None
-        self.alive      = threading.Event()
-        self.dataFrame = CCDataFrame(None, wx.ID_ANY, "")
+        self.thread         = None
+        self.alive          = threading.Event()
+        self.dataFrame      = CCDataFrame(None, wx.ID_ANY, "")
         self.dataFrame.mainFrame = self
         self.dataFrame.Show()
         # reactor data
-        self.referenceVals1 = [5,5,5,5,5]  # reference values from detector 1
-        self.odVals1    = [0,0,0,0,0] # od values from detector 1
-        self.bgVals     = 0 # background values for both detectors
-        self.temp       = 0 # sample temperature
-        self.lightBrightness = 0
+        self.numChambers    = 0
+        self.numLeds        = 0
+        self.referenceVals1 = [0]  # reference values from detector 1
+        self.odVals1        = [0] # od values from detector 1
+        self.bgVals         = 0 # background values for both detectors
+        self.temp           = 0 # sample temperature
+        self.lightBrightness = [0]
         self.reactorMode    = 1
         self.minLight       = 0
         self.maxLight       = 255
@@ -83,7 +85,7 @@ class CCMainFrame(wx.Frame):
         # begin wxGlade: CCMainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.notebook_main = wx.Notebook(self, wx.ID_ANY, style=0)
+        self.notebook_main = wx.Notebook(self, wx.ID_ANY)
         self.notebook_1_pane_1 = captorControlNotebook(self.notebook_main, wx.ID_ANY)
         self.notebook_reactor_connection = wx.Panel(self.notebook_main, wx.ID_ANY)
         self.label_1_copy = wx.StaticText(self.notebook_reactor_connection, wx.ID_ANY, _("Captor Control"))
@@ -102,37 +104,47 @@ class CCMainFrame(wx.Frame):
         self.label_1_copy_copy_copy = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Captor Control"))
         self.label_12 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Reference Value Measurement"))
         self.button_measure_refs = wx.Button(self.notebook_reference_values, wx.ID_ANY, _("Measure Reference Vals"))
-        self.label_13 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD 850nm (1)"))
-        self.label_od850_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_4 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD 850nm (2)"))
-        self.label_od850_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD 740nm (1)"))
-        self.label_od740_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_5 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD 740nm (2)"))
-        self.label_od740_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Red (1)"))
-        self.label_odRed_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_6 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Red (2)"))
-        self.label_odRed_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Green (1)"))
-        self.label_odGreen_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_7 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Green (2)"))
-        self.label_odGreen_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Blue (1)"))
-        self.label_odBlue_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
-        self.label_13_copy_8 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("OD Blue (2)"))
-        self.label_odBlue_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led1_ch1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led1 (Ch1)"))
+        self.label_led1_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led1_ch2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led1 (Ch2)"))
+        self.label_led1_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led1_ch3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led3 (Ch3)"))
+        self.label_led1_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led2_ch1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led2 (Ch1)"))
+        self.label_led2_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led2_ch2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led2 (Ch2)"))
+        self.label_led2_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led2_ch3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led2 (Ch3)"))
+        self.label_led2_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led3_ch1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led3 (Ch1)"))
+        self.label_led3_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led3_ch2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led3 (Ch2)"))
+        self.label_led3_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led3_ch3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led3 (Ch3)"))
+        self.label_led3_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led4_ch1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led4 (Ch1)"))
+        self.label_led4_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led4_ch2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led4 (Ch2)"))
+        self.label_led4_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led4_ch3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led4 (Ch3)"))
+        self.label_led4_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led5_ch1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led5 (Ch1)"))
+        self.label_led5_1 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led5_ch2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led5 (Ch2)"))
+        self.label_led5_2 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
+        self.label_led5_ch3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Led5 (Ch3)"))
+        self.label_led5_3 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("-"))
         self.notebook_dyn_light = wx.Panel(self.notebook_main, wx.ID_ANY)
         self.label_dynLightTitle = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Captor Control"))
         self.label_14 = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Dynamic Light Program"))
         self.label_5 = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("File Loaded:"))
         self.dyn_light_filepath_label = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("-"))
-        self.button_ld_dynlght_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Load File"))
-        self.button_plotDynLight_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Show Profile"))
+        self.label_5_copy = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Selected Chamber:"))
+        self.button_ld_dynlght_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Load File"))
         self.button_uld_dynlght_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Upload to Reactor"))
-        self.button_dld_dynlght_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Download From Reactor"))
-        self.notebook_remote_control = wx.Panel(self.notebook_main, wx.ID_ANY)
-        self.label_1_copy_copy_copy_copy_2 = wx.StaticText(self.notebook_remote_control, wx.ID_ANY, _("Captor Control"))
+        self.dyn_light_ch_select_combo_box = wx.ComboBox(self.notebook_dyn_light, wx.ID_ANY, choices=[_("0"), _("1"), _("2")], style=wx.CB_DROPDOWN)
+        self.button_plotDynLight_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Show Profile"))
+        self.button_dld_dynlght_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Download From Reactor"))
 
         self.__set_properties()
         self.__do_layout()
@@ -142,20 +154,33 @@ class CCMainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnOpenLogfileDialogButton, self.button_select_logfile)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivateLoggingButtonClicked, self.logging_active_button)
         self.Bind(wx.EVT_BUTTON, self.OnOpenMeasureRefValsButton, self.button_measure_refs)
-        self.Bind(wx.EVT_BUTTON, self.OnOpenDynLightFileDialogButton, self.button_ld_dynlght_copy_copy)
-        self.Bind(wx.EVT_BUTTON, self.OnShowDynLightClicked, self.button_plotDynLight_copy_copy)
+        self.Bind(wx.EVT_BUTTON, self.OnOpenDynLightFileDialogButton, self.button_ld_dynlght_copy_copy_copy)
         self.Bind(wx.EVT_BUTTON, self.OnOpenUploadDynLightButton, self.button_uld_dynlght_copy_copy)
-        self.Bind(wx.EVT_BUTTON, self.OnOpenDownloadDynLightButton, self.button_dld_dynlght_copy_copy)
+        self.Bind(wx.EVT_BUTTON, self.OnShowDynLightClicked, self.button_plotDynLight_copy_copy_copy)
+        self.Bind(wx.EVT_BUTTON, self.OnOpenDownloadDynLightButton, self.button_dld_dynlght_copy_copy_copy)
         # end wxGlade
         self.__attach_events()          # register events
         self.list_connections()         # fill list with all serial connections
         self.serial_connection_combo_box.SetSelection(self.serial_connection_combo_box.GetCount()-1)# select last connection by default
         
+        self.dyn_light_ch_select_combo_box.SetSelection(0)
+        # make list of GUI labels
+        self.reference_val_labels      = [[],[],[]]
+        self.reference_val_labels[0] = [self.label_led1_ch1, self.label_led2_ch1, self.label_led3_ch1, self.label_led4_ch1, self.label_led5_ch1]
+        self.reference_val_labels[1] = [self.label_led1_ch2, self.label_led2_ch2, self.label_led3_ch2, self.label_led4_ch2, self.label_led5_ch2]
+        self.reference_val_labels[2] = [self.label_led1_ch3, self.label_led2_ch3, self.label_led3_ch3, self.label_led4_ch3, self.label_led5_ch3]
+        self.reference_val_data_labels    = [[],[],[]]
+        self.reference_val_data_labels[0] = [self.label_led1_1, self.label_led2_1, self.label_led3_1, self.label_led4_1, self.label_led5_1]
+        self.reference_val_data_labels[1] = [self.label_led1_2, self.label_led2_2, self.label_led3_2, self.label_led4_2, self.label_led5_2]
+        self.reference_val_data_labels[2] = [self.label_led1_3, self.label_led2_3, self.label_led3_3, self.label_led4_3, self.label_led5_3]
+        self.od_val_data_labels     = [self.dataFrame.OD_value_led1_label, self.dataFrame.OD_value_led2_label, self.dataFrame.OD_value_led3_label, self.dataFrame.OD_value_led4_label, self.dataFrame.OD_value_led5_label]
+        self.od_data_labels         = [self.dataFrame.OD_led1_label, self.dataFrame.OD_led2_label, self.dataFrame.OD_led3_label, self.dataFrame.OD_led4_label, self.dataFrame.OD_led5_label]
+
 
     def __set_properties(self):
         # begin wxGlade: CCMainFrame.__set_properties
         self.SetTitle(_("Captor Control"))
-        self.SetSize((730, 500))
+        self.SetSize((730, 600))
         self.label_1_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_9.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.serial_connection_combo_box.SetMinSize((250, -1))
@@ -173,25 +198,27 @@ class CCMainFrame(wx.Frame):
         self.label_dynLightTitle.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_14.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.dyn_light_filepath_label.SetMinSize((250, -1))
-        self.button_ld_dynlght_copy_copy.SetToolTipString(_("Text file holding the light/duration tuples"))
-        self.button_plotDynLight_copy_copy.SetToolTipString(_("display plot of loaded program"))
+        self.button_ld_dynlght_copy_copy_copy.SetToolTipString(_("Text file holding the light/duration tuples"))
         self.button_uld_dynlght_copy_copy.SetToolTipString(_("transfer loaded program to reactor"))
-        self.button_dld_dynlght_copy_copy.SetToolTipString(_("retrieve program curretly on the reactor"))
-        self.label_1_copy_copy_copy_copy_2.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
+        self.dyn_light_ch_select_combo_box.SetMinSize((250, -1))
+        self.dyn_light_ch_select_combo_box.SetToolTipString(_("Select reactor chamber to set dynamic light"))
+        self.dyn_light_ch_select_combo_box.SetFocus()
+        self.dyn_light_ch_select_combo_box.SetSelection(-1)
+        self.button_plotDynLight_copy_copy_copy.SetToolTipString(_("display plot of loaded program"))
+        self.button_dld_dynlght_copy_copy_copy.SetToolTipString(_("retrieve program curretly on the reactor"))
         # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: CCMainFrame.__do_layout
         sizer_main = wx.BoxSizer(wx.VERTICAL)
-        sizer_rc_main = wx.BoxSizer(wx.VERTICAL)
         sizer_dyn_light_main = wx.BoxSizer(wx.VERTICAL)
         sizer_22 = wx.BoxSizer(wx.VERTICAL)
         sizer_6 = wx.BoxSizer(wx.HORIZONTAL)
-        grid_sizer_4_copy = wx.GridSizer(2, 2, 0, 0)
+        grid_sizer_4_copy = wx.GridSizer(2, 3, 0, 0)
         sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
         sizer_refVals_main = wx.BoxSizer(wx.VERTICAL)
         sizer_21 = wx.BoxSizer(wx.VERTICAL)
-        grid_sizer_2 = wx.GridSizer(5, 4, 0, 0)
+        grid_sizer_2 = wx.GridSizer(5, 6, 0, 0)
         sizer_logging_main = wx.BoxSizer(wx.VERTICAL)
         sizer_19 = wx.BoxSizer(wx.VERTICAL)
         sizer_20 = wx.BoxSizer(wx.VERTICAL)
@@ -202,11 +229,11 @@ class CCMainFrame(wx.Frame):
         sizer_17 = wx.BoxSizer(wx.VERTICAL)
         sizer_connection_main.Add(self.label_1_copy, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_15.Add(self.label_9, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_17.Add(self.label_10, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
-        sizer_17.Add(self.serial_connection_combo_box, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALIGN_CENTER_VERTICAL, 0)
+        sizer_17.Add(self.label_10, 0, wx.ALIGN_CENTER, 0)
+        sizer_17.Add(self.serial_connection_combo_box, 0, wx.ALIGN_CENTER, 0)
         sizer_16.Add(sizer_17, 1, 0, 0)
-        sizer_18.Add(self.button_connect_serial, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 10)
-        sizer_18.Add(self.button_refresh_serial_copy, 0, wx.ALL | wx.ALIGN_CENTER_VERTICAL, 10)
+        sizer_18.Add(self.button_connect_serial, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
+        sizer_18.Add(self.button_refresh_serial_copy, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALL, 10)
         sizer_16.Add(sizer_18, 1, wx.EXPAND, 0)
         sizer_15.Add(sizer_16, 1, wx.EXPAND, 0)
         sizer_connection_main.Add(sizer_15, 1, wx.EXPAND, 0)
@@ -220,52 +247,61 @@ class CCMainFrame(wx.Frame):
         sizer_logging_main.Add(sizer_19, 1, wx.EXPAND, 0)
         self.notebook_logging.SetSizer(sizer_logging_main)
         sizer_refVals_main.Add(self.label_1_copy_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_21.Add(self.label_12, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 10)
-        sizer_21.Add(self.button_measure_refs, 0, wx.ALL | wx.ALIGN_CENTER_HORIZONTAL, 10)
-        grid_sizer_2.Add(self.label_13, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_od850_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_4, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_od850_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_od740_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_5, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_od740_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_1, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odRed_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_6, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odRed_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_2, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odGreen_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_7, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odGreen_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_3, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odBlue_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_13_copy_8, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_odBlue_2, 0, 0, 0)
+        sizer_21.Add(self.label_12, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
+        sizer_21.Add(self.button_measure_refs, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led1_ch1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led1_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led1_ch2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led1_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led1_ch3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led1_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_ch1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led2_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_ch2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led2_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_ch3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led2_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_ch1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led3_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_ch2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led3_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_ch3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led3_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_ch1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led4_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_ch2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_ch3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led5_ch1, 0, 0, 10)
+        grid_sizer_2.Add(self.label_led5_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led5_ch2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led5_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led5_ch3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led5_3, 0, 0, 0)
         sizer_21.Add(grid_sizer_2, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_refVals_main.Add(sizer_21, 1, wx.EXPAND, 0)
         self.notebook_reference_values.SetSizer(sizer_refVals_main)
         sizer_dyn_light_main.Add(self.label_dynLightTitle, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_22.Add(self.label_14, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_5.Add(self.label_5, 0, wx.ALL | wx.ALIGN_BOTTOM, 10)
-        sizer_5.Add(self.dyn_light_filepath_label, 0, wx.ALL | wx.ALIGN_BOTTOM, 10)
+        sizer_5.Add(self.label_5, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        sizer_5.Add(self.dyn_light_filepath_label, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
         sizer_22.Add(sizer_5, 1, 0, 0)
-        grid_sizer_4_copy.Add(self.button_ld_dynlght_copy_copy, 0, wx.ALL, 10)
-        grid_sizer_4_copy.Add(self.button_plotDynLight_copy_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.label_5_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_ld_dynlght_copy_copy_copy, 0, wx.ALL, 10)
         grid_sizer_4_copy.Add(self.button_uld_dynlght_copy_copy, 0, wx.ALL, 10)
-        grid_sizer_4_copy.Add(self.button_dld_dynlght_copy_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.dyn_light_ch_select_combo_box, 0, wx.ALL, 0)
+        grid_sizer_4_copy.Add(self.button_plotDynLight_copy_copy_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_dld_dynlght_copy_copy_copy, 0, wx.ALL, 10)
         sizer_6.Add(grid_sizer_4_copy, 1, 0, 0)
         sizer_22.Add(sizer_6, 1, 0, 0)
-        sizer_dyn_light_main.Add(sizer_22, 1, wx.EXPAND | wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_dyn_light_main.Add(sizer_22, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 0)
         self.notebook_dyn_light.SetSizer(sizer_dyn_light_main)
-        sizer_rc_main.Add(self.label_1_copy_copy_copy_copy_2, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        self.notebook_remote_control.SetSizer(sizer_rc_main)
         self.notebook_main.AddPage(self.notebook_1_pane_1, _("Main"))
         self.notebook_main.AddPage(self.notebook_reactor_connection, _("Reactor Connection"))
         self.notebook_main.AddPage(self.notebook_logging, _("Logging"))
         self.notebook_main.AddPage(self.notebook_reference_values, _("Reference Values"))
         self.notebook_main.AddPage(self.notebook_dyn_light, _("Dynamic Light Mode"))
-        self.notebook_main.AddPage(self.notebook_remote_control, _("Remote Control"))
         sizer_main.Add(self.notebook_main, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_main)
         self.Layout()
@@ -316,7 +352,9 @@ class CCMainFrame(wx.Frame):
             print "received reactor message: " + text
         
         # reference values
-        if dataSections[0] == "REF": 
+        if dataSections[0] == "ERROR": 
+            print "Reactor Error occurred: " + dataSections[1]
+        elif dataSections[0] == "REF": 
             self.digestReferenceValues(dataSections)
         elif dataSections[0] == "MD": # received updated reactor mode
             self.digestReactorModeValues(dataSections)
@@ -324,6 +362,8 @@ class CCMainFrame(wx.Frame):
             self.digestSampleValues(dataSections)
         elif dataSections[0] == "LP": # received light profile 
             self.digestLightProfile(dataSections)
+        elif dataSections[0] == "HS": # received light profile 
+            self.digestHandshake(dataSections)
         else:
             print "Unknown Reactor Message " + dataSections[0] + "!"
             if DEBUG:
@@ -345,6 +385,7 @@ class CCMainFrame(wx.Frame):
         if(self.serial.isOpen()):
             if DEBUG:
                 print "currently connected to serial: " + self.serial.port + ". Disconnecting... "
+            self.sendMessage("bye","")
             self.StopThread()               #stop reader thread
             self.serial.close()             #disconnect serial
             self.button_connect_serial.SetLabel("Connect") # set button to connect
@@ -418,21 +459,24 @@ class CCMainFrame(wx.Frame):
         if self.dynLight == None:
             print "No dynamic light program loaded!"
             return
+        chamber_idx = self.dyn_light_ch_select_combo_box.GetValue()
         for i,item in enumerate(self.dynLight):
-            self.sendMessage("bp",str(i) + msgSep + str(item[0]) + msgSep + str(item[1]) + msgSep)
+            self.sendMessage("bp",str(chamber_idx) + msgSep + str(i) + msgSep + str(item[0]) + msgSep + str(item[1]) + msgSep)
 
         # if dynamic light program is shorter that te max. length, there might be remaining 
         # entries from the old program in the reactors memory, which need to be overwritten
         if len(self.dynLight) < maxDynLightLen:
             for i in range(len(self.dynLight), maxDynLightLen+1):
-                self.sendMessage("bp",str(i) + msgSep + '0' + msgSep + '0' + msgSep)
+                self.sendMessage("bp",str(chamber_idx) + msgSep + str(i) + msgSep + '0' + msgSep + '0' + msgSep)
             
 
     def OnOpenDownloadDynLightButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
         """sends command to reactor to answer with current dynamic light program.
         """
         # TODO: implement parsing the reactor reply
-        self.sendMessage("sbp","")
+        chamber_idx = str(self.dyn_light_ch_select_combo_box.GetValue())
+        print chamber_idx
+        self.sendMessage("sbp",chamber_idx)
 
     def OnShowDynLightClicked(self, event):  # wxGlade: CCMainFrame.<event_handler>
         """plot loaded dynamic light profile"""
@@ -444,13 +488,12 @@ class CCMainFrame(wx.Frame):
     def digestReferenceValues(self, dataSections):
         """parses OD reference values sent from reactor, updates gui"""
         values = dataSections[1].split(",")
-        nChambers = len(values) / 5 # five wavelengths per culture chamber
-        self.referenceVals1 = []
+        self.referenceVals1 = [[0] * self.numLeds for i in range(self.numChambers)]
         # store ref data
-        for iChamber in range(0,nChambers):
-            offset = iChamber * 5
-            for i in range(0,5):
-                self.referenceVals1.append( float(values[i+offset]) )
+        for i in range(0,self.numChambers):
+            offset = i * self.numChambers
+            for j in range(0,self.numLeds):
+                self.referenceVals1[i][j] = float(values[j+offset])
         self.updateReactorData()
 
     def digestReactorModeValues(self, dataSections):
@@ -466,49 +509,56 @@ class CCMainFrame(wx.Frame):
         if DEBUG:
             print "parsing sample data"
         
-        values = dataSections[1].split(",")
-        nChambers = len(values) / 5 # five wavelengths per culture chamber
-        if DEBUG:
-            print 'detected number of culture chambers:' + str(nChambers)
-            
-        self.odVals1 = []
-        self.bgVals = []
-
+        values          = dataSections[1].split(",")            
+        
         # store OD data
-        for iChamber in range(0,nChambers):
-            offset = iChamber * 5
-            for i in range(0,5):
-                self.odVals1.append( float( values[i+offset] ) )
+        self.odVals1    = [[0] * self.numLeds for i in range(0,self.numChambers)]
+        for iChamber in range(0,self.numChambers):
+            offset = iChamber * self.numLeds
+            for i in range(0,self.numLeds):
+                self.odVals1[iChamber][i] = float( values[i+offset] )
 
         # background values for both detectors
-        bgValues = dataSections[2].split(",")
+        bgValues        = dataSections[2].split(",")
+        self.bgVals     = [0] * self.numChambers
+        for iChamber in range(0,self.numChambers):
+                self.bgVals[iChamber] = float(bgValues[iChamber])
 
-        for iChamber in range(0,nChambers):
-                self.bgVals.append( float(bgValues[iChamber]) )
+        tempValues      = dataSections[3].split(",")
+        self.temp       = [0] * self.numChambers
+        for iChamber in range(0,self.numChambers):
+                self.temp[iChamber] = float(tempValues[iChamber])
 
+        lightValues             = dataSections[4].split(",")
+        self.lightBrightness    = [0] * self.numChambers
+        for iChamber in range(0,self.numChambers):
+                self.lightBrightness[iChamber] = int(lightValues[iChamber])
+                
+        lightValues     = dataSections[5].split(",")
+        self.minLight   = [0] * self.numChambers
+        for iChamber in range(0,self.numChambers):
+                self.minLight[iChamber] = int(lightValues[iChamber])
+        lightValues     = dataSections[6].split(",")
+        self.maxLight   = [0] * self.numChambers
+        for iChamber in range(0,self.numChambers):
+                self.maxLight[iChamber] = int(lightValues[iChamber])
+                
         # other parameters
-        otherValues = dataSections[3].split(",")
-        self.temp          = float(otherValues[0])
-        self.lightBrightness = int(otherValues[1])
-        self.reactorMode   = int(otherValues[2])
-        self.minLight      = int(otherValues[3])
-        self.maxLight      = int(otherValues[4])
-        self.sampleRate    = int(otherValues[5])
-        self.sampleTime    = datetime.now().strftime('%Y/%m/%d/%H/%M/%S')
+        otherValues         = dataSections[7].split(",")
+        self.sampleRate     = int(otherValues[0])
+        self.sampleTime     = otherValues[1]
+        self.reactorMode    = int(otherValues[2])
+        # self.sampleTime    = datetime.now().strftime('%Y/%m/%d/%H/%M/%S')
         # show in gui
         self.updateReactorData()
         # add data to datastore
-        dt = [self.sampleTime] + self.odVals1 + bgValues + [self.temp, self.lightBrightness, self.reactorMode]
+        dt = [self.sampleTime] + [self.odVals1[i][j] for i in range(0,self.numChambers) for j in range(0,self.numLeds)] + bgValues + self.temp + self.lightBrightness + [self.reactorMode]
         # check if data store already initialized, otherwise do so
         if(self.dataStore == None):
-            # assemble list of variable names
-            self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i)
-						for i in range(0,nChambers) for cn in CHANNEL_NAMES ]
-            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ['bg_ch' + str(i) for i in range(0,nChambers)]
-            self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Temperature", "Brightness", "ReactorMode"]
-            self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
-        # save data
-        self.dataStore.addSample(dt, self.VARIABLE_NAMES)
+            print 'Error, data store not initialized...'
+        else:
+            # save data
+            self.dataStore.addSample(dt, self.VARIABLE_NAMES)
         
         # write to log file
         self.logData(dt)
@@ -527,6 +577,60 @@ class CCMainFrame(wx.Frame):
                 dl.append(item)
         if len(dl) > 0:
             self.dynLight = dl
+
+    def digestHandshake(self, dataSections):
+        """parses Handshake from reactor"""
+        values              = dataSections[1].split(",")
+        self.numChambers    = int(values[0])
+        self.numLeds        = int(values[1])
+        
+        self.dataStore      = None
+        # initalize data arrays
+        self.odVals1        = [[0] * self.numLeds] * self.numChambers
+        self.referenceVals1 = [[0] * self.numLeds] * self.numChambers
+        self.temp           = [0] * self.numChambers
+        self.bgVals         = [0] * self.numChambers
+        self.lightBrightness = [0] * self.numChambers
+        self.minLight       = [0] * self.numChambers
+        self.maxLight       = [0] * self.numChambers
+        # set GUI labels
+        for i in range(0,3):
+            for j in range(0,5):
+                if j < self.numLeds and i < self.numChambers:
+                    label_str   = CHANNEL_NAMES[j] + "(Ch " + str(i) + ")"
+                    val_str     = "-"
+                else:
+                    label_str   = ""
+                    val_str     = ""
+                self.reference_val_labels[i][j].SetLabel(label_str)
+                self.reference_val_data_labels[i][j].SetLabel(val_str)
+        for i in range(0,5):
+            if i < self.numLeds:
+                label_str   = CHANNEL_NAMES[i]
+                val_str     = '-'
+            else:
+                val_str = ''
+                label_str = ''
+            self.od_data_labels[i].SetLabel(label_str)
+            self.od_val_data_labels[i].SetLabel(val_str)
+            
+        # list available chambers in dynamic light selection box
+        self.dyn_light_ch_select_combo_box.Clear()
+        # get list of connections
+        for i in range(0, self.numChambers):
+            # add combo box in main frame
+            self.dyn_light_ch_select_combo_box.Append(str(i))
+        self.dyn_light_ch_select_combo_box.SetSelection(0)
+
+        # initialize the data store: assemble list of variable names
+        self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i) for i in range(0,self.numChambers) for cn in CHANNEL_NAMES[0:self.numLeds] ]
+        self.VARIABLE_NAMES = self.VARIABLE_NAMES + ['bg_ch' + str(i) for i in range(0,self.numChambers)]
+        self.VARIABLE_NAMES = self.VARIABLE_NAMES + ['temp_ch' + str(i) for i in range(0,self.numChambers)]
+        self.VARIABLE_NAMES = self.VARIABLE_NAMES + ["Brightness", "ReactorMode"]
+        self.dataStore = DataStore(BUFFER_SIZE, self.VARIABLE_NAMES)
+        
+        # tell the reactor that the handshake was taken
+        self.sendMessage("hi","")
 
     def logData(self, data):
         """write sample to log file"""
@@ -549,29 +653,24 @@ class CCMainFrame(wx.Frame):
     def updateReactorData(self):
         """updates gui with current sample data"""
         # show data in gui
-        self.label_od850_1.SetLabel(str(self.referenceVals1[0]))
-        self.label_od740_1.SetLabel(str(self.referenceVals1[1]))
-        self.label_odRed_1.SetLabel(str(self.referenceVals1[2]))
-        self.label_odGreen_1.SetLabel(str(self.referenceVals1[3]))
-        self.label_odBlue_1.SetLabel(str(self.referenceVals1[4]))
-
-        self.dataFrame.od_850_label.SetLabel(str(self.odVals1[0]))
-        self.dataFrame.od_740_label.SetLabel(str(self.odVals1[1]))
-        self.dataFrame.od_red_label.SetLabel(str(self.odVals1[2]))
-        self.dataFrame.od_green_label.SetLabel(str(self.odVals1[3]))
-        self.dataFrame.od_blue_label.SetLabel(str(self.odVals1[4]))
+        for i in range(0,self.numChambers):
+            offset = i * self.numChambers
+            for j in range(0,self.numLeds):
+                self.reference_val_data_labels[i][j].SetLabel(str(self.referenceVals1[i][j]))
+        for j in range(0,self.numLeds):
+            self.od_val_data_labels[j].SetLabel(str(','.join([str(self.odVals1[i][j]) for i in range(0,self.numChambers)]) ))
 
         # background values for detector
-        self.dataFrame.background_od_label.SetLabel(str(self.bgVals))
+        self.dataFrame.background_od_label.SetLabel(str(','.join([str(s) for s in self.bgVals])))
         # sample temperature
-        self.dataFrame.temp_label.SetLabel(str(self.temp))
+        self.dataFrame.temp_label.SetLabel(str(','.join([str(s) for s in self.temp])))
         # brightness
-        self.dataFrame.bgt_label.SetLabel(str(self.lightBrightness)) 
+        self.dataFrame.bgt_label.SetLabel(str(','.join([str(s) for s in self.lightBrightness]))) 
         # sample temperature
         self.dataFrame.time_label.SetLabel(str(self.sampleTime))
 
-        self.notebook_1_pane_1.text_ctrl_min_led_bght.SetValue(str(self.minLight))
-        self.notebook_1_pane_1.text_ctrl_max_led_bght.SetValue(str(self.maxLight))
+        self.notebook_1_pane_1.text_ctrl_min_led_bght.SetValue(str(','.join([str(s) for s in self.minLight])))
+        self.notebook_1_pane_1.text_ctrl_max_led_bght.SetValue(str(','.join([str(s) for s in self.maxLight])))
         self.notebook_1_pane_1.text_ctrl_sampling_rate.SetValue(str(self.sampleRate))
 
         

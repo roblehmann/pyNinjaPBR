@@ -205,7 +205,7 @@ class GraphFrame(wx.Frame):
                 )[0]
 
             self.temp_plot_data = self.axes3.plot(
-                self.dataStore.getData("Temperature"), 
+                self.dataStore.getData("temp_ch0"), 
                 linewidth=1,
                 color=(0, 1, 0),
                 )[0]
@@ -220,7 +220,7 @@ class GraphFrame(wx.Frame):
         #
         x = self.dataStore.getData(self.variableToPlot)
         x_brightness = self.dataStore.getData("Brightness")
-        x_temp = self.dataStore.getData("Temperature")
+        x_temp = self.dataStore.getData("temp_ch0")
         if self.xmax_control.is_auto():
             xmax = len(x) if len(x) > 50 else 50
         else:
