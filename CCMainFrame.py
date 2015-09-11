@@ -27,29 +27,31 @@ from captorControlNotebook import captorControlNotebook
 # access the GUI without crashing. wxMutexGuiEnter/wxMutexGuiLeave
 # could be used too, but an event is more elegant.
 
-SERIALRX = wx.NewEventType()
+
+SERIALRX        = wx.NewEventType()
 # bind to serial data receive events
-EVT_SERIALRX = wx.PyEventBinder(SERIALRX, 0)
+EVT_SERIALRX    = wx.PyEventBinder(SERIALRX, 0)
 
 #----------------------------------------------------------------------
 ID_SETTINGS     = wx.NewId()
 ID_EXIT         = wx.NewId()
 
 
-config = ConfigParser.RawConfigParser()
+config  = ConfigParser.RawConfigParser()
 config.read('./pyCaptorConfig.cfg')
 # read logging section
-msgSep = config.get('logging', 'msgSep')
+msgSep  = config.get('logging', 'msgSep')
 msgTerm = config.get('logging', 'msgTerm')
-DEBUG = config.getboolean('logging', 'DEBUG')
+DEBUG   = config.getboolean('logging', 'DEBUG')
 # names of values obtained from the reactor
-CHANNEL_NAMES = config.get('logging', 'CHANNEL_NAMES').split(',')
+CHANNEL_NAMES   = config.get('logging', 'CHANNEL_NAMES').split(',')
 # read plot section
 # max. number of samples to show in plot
-BUFFER_SIZE = config.getint('plotting', 'BUFFER_SIZE')
+BUFFER_SIZE     = config.getint('plotting', 'BUFFER_SIZE')
 # read dynamicLight section
 # number of Brightness/duration tuples stored in the reactor as dynamic light program
-maxDynLightLen = config.getint('dynamicLight', 'maxDynLightLen')
+maxDynLightLen  = config.getint('dynamicLight', 'maxDynLightLen')
+
 
 class CCMainFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -62,6 +64,7 @@ class CCMainFrame(wx.Frame):
         self.dataFrame.mainFrame = self
         self.dataFrame.Show()
         # reactor data
+        self.logging_active = False
         self.numChambers    = 0
         self.numLeds        = 0
         self.referenceVals1 = [0]  # reference values from detector 1
@@ -74,6 +77,7 @@ class CCMainFrame(wx.Frame):
         self.maxLight       = 255
         self.sampleRate     = 10
         self.sampleTime     = 0
+        self.reference_values_measured  = False
         # dynamic light program definition
         self.dynLight = None
         # frame showing a plot of the profile
@@ -81,6 +85,9 @@ class CCMainFrame(wx.Frame):
         # frame showing real time plot of OD curve
         self.odCurveFrame = None
         self.dataStore    = None
+        # background colors representing the operation modes
+        # mode order: standby, light, dark, dynamic, error
+        self.mode_bg_cols    =   [(12, 123, 232), (232, 222, 44), (0, 0, 255), (177, 232, 0 ), (255, 0, 0)]
         
         # begin wxGlade: CCMainFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
@@ -137,14 +144,16 @@ class CCMainFrame(wx.Frame):
         self.notebook_dyn_light = wx.Panel(self.notebook_main, wx.ID_ANY)
         self.label_dynLightTitle = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Captor Control"))
         self.label_14 = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Dynamic Light Program"))
-        self.label_5 = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("File Loaded:"))
-        self.dyn_light_filepath_label = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("-"))
         self.label_5_copy = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("Selected Chamber:"))
         self.button_ld_dynlght_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Load File"))
         self.button_uld_dynlght_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Upload to Reactor"))
         self.dyn_light_ch_select_combo_box = wx.ComboBox(self.notebook_dyn_light, wx.ID_ANY, choices=[_("0"), _("1"), _("2")], style=wx.CB_DROPDOWN)
         self.button_plotDynLight_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Show Profile"))
         self.button_dld_dynlght_copy_copy_copy = wx.Button(self.notebook_dyn_light, wx.ID_ANY, _("Download From Reactor"))
+        self.label_5_copy_1_copy = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("File Loaded:"))
+        self.dyn_light_filepath_label = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, _("-"))
+        self.label_5_copy_1 = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, "")
+        self.unused = wx.StaticText(self.notebook_dyn_light, wx.ID_ANY, "")
 
         self.__set_properties()
         self.__do_layout()
@@ -180,7 +189,7 @@ class CCMainFrame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: CCMainFrame.__set_properties
         self.SetTitle(_("Captor Control"))
-        self.SetSize((730, 600))
+        self.SetSize((730, 320))
         self.label_1_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_9.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.serial_connection_combo_box.SetMinSize((250, -1))
@@ -197,7 +206,6 @@ class CCMainFrame(wx.Frame):
         self.button_measure_refs.SetToolTipString(_("Reference OD of culture chamber and medium only"))
         self.label_dynLightTitle.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.label_14.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
-        self.dyn_light_filepath_label.SetMinSize((250, -1))
         self.button_ld_dynlght_copy_copy_copy.SetToolTipString(_("Text file holding the light/duration tuples"))
         self.button_uld_dynlght_copy_copy.SetToolTipString(_("transfer loaded program to reactor"))
         self.dyn_light_ch_select_combo_box.SetMinSize((250, -1))
@@ -206,6 +214,8 @@ class CCMainFrame(wx.Frame):
         self.dyn_light_ch_select_combo_box.SetSelection(-1)
         self.button_plotDynLight_copy_copy_copy.SetToolTipString(_("display plot of loaded program"))
         self.button_dld_dynlght_copy_copy_copy.SetToolTipString(_("retrieve program curretly on the reactor"))
+        self.dyn_light_filepath_label.SetMinSize((250, -1))
+        self.unused.SetMinSize((250, -1))
         # end wxGlade
 
     def __do_layout(self):
@@ -213,9 +223,9 @@ class CCMainFrame(wx.Frame):
         sizer_main = wx.BoxSizer(wx.VERTICAL)
         sizer_dyn_light_main = wx.BoxSizer(wx.VERTICAL)
         sizer_22 = wx.BoxSizer(wx.VERTICAL)
+        sizer_5_copy = wx.BoxSizer(wx.HORIZONTAL)
         sizer_6 = wx.BoxSizer(wx.HORIZONTAL)
-        grid_sizer_4_copy = wx.GridSizer(2, 3, 0, 0)
-        sizer_5 = wx.BoxSizer(wx.HORIZONTAL)
+        grid_sizer_4_copy = wx.GridSizer(3, 3, 0, 0)
         sizer_refVals_main = wx.BoxSizer(wx.VERTICAL)
         sizer_21 = wx.BoxSizer(wx.VERTICAL)
         grid_sizer_2 = wx.GridSizer(5, 6, 0, 0)
@@ -240,61 +250,63 @@ class CCMainFrame(wx.Frame):
         self.notebook_reactor_connection.SetSizer(sizer_connection_main)
         sizer_logging_main.Add(self.label_1_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_19.Add(self.label_11, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_20.Add(self.button_select_logfile, 0, wx.ALL, 10)
-        sizer_20.Add(self.label_active_log_file, 0, wx.ALL, 10)
-        sizer_20.Add(self.logging_active_button, 0, 0, 0)
+        sizer_20.Add(self.button_select_logfile, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        sizer_20.Add(self.label_active_log_file, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        sizer_20.Add(self.logging_active_button, 0, wx.ALIGN_CENTER, 0)
         sizer_19.Add(sizer_20, 1, wx.EXPAND, 0)
         sizer_logging_main.Add(sizer_19, 1, wx.EXPAND, 0)
         self.notebook_logging.SetSizer(sizer_logging_main)
         sizer_refVals_main.Add(self.label_1_copy_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_21.Add(self.label_12, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_21.Add(self.button_measure_refs, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
+        sizer_21.Add(self.button_measure_refs, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         grid_sizer_2.Add(self.label_led1_ch1, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led1_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led1_1, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led1_ch2, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led1_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led1_2, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led1_ch3, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led1_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led1_3, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led2_ch1, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led2_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_1, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led2_ch2, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led2_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_2, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led2_ch3, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led2_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led2_3, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led3_ch1, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led3_1, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_1, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led3_ch2, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led3_2, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_2, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led3_ch3, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led3_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led3_3, 0, wx.ALL, 10)
         grid_sizer_2.Add(self.label_led4_ch1, 0, wx.ALL, 10)
-        grid_sizer_2.Add(self.label_led4_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led4_ch2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led4_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led4_ch3, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led4_3, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led5_ch1, 0, 0, 10)
-        grid_sizer_2.Add(self.label_led5_1, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led5_ch2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led5_2, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led5_ch3, 0, 0, 0)
-        grid_sizer_2.Add(self.label_led5_3, 0, 0, 0)
+        grid_sizer_2.Add(self.label_led4_1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led4_ch2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led4_2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led4_ch3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led4_3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_ch1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_1, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_ch2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_2, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_ch3, 0, wx.ALL, 10)
+        grid_sizer_2.Add(self.label_led5_3, 0, wx.ALL, 10)
         sizer_21.Add(grid_sizer_2, 1, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_refVals_main.Add(sizer_21, 1, wx.EXPAND, 0)
         self.notebook_reference_values.SetSizer(sizer_refVals_main)
         sizer_dyn_light_main.Add(self.label_dynLightTitle, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_22.Add(self.label_14, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_5.Add(self.label_5, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        sizer_5.Add(self.dyn_light_filepath_label, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
-        sizer_22.Add(sizer_5, 1, 0, 0)
         grid_sizer_4_copy.Add(self.label_5_copy, 0, wx.ALL, 10)
-        grid_sizer_4_copy.Add(self.button_ld_dynlght_copy_copy_copy, 0, wx.ALL, 10)
-        grid_sizer_4_copy.Add(self.button_uld_dynlght_copy_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_ld_dynlght_copy_copy_copy, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_uld_dynlght_copy_copy, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         grid_sizer_4_copy.Add(self.dyn_light_ch_select_combo_box, 0, wx.ALL, 0)
-        grid_sizer_4_copy.Add(self.button_plotDynLight_copy_copy_copy, 0, wx.ALL, 10)
-        grid_sizer_4_copy.Add(self.button_dld_dynlght_copy_copy_copy, 0, wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_plotDynLight_copy_copy_copy, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.button_dld_dynlght_copy_copy_copy, 0, wx.ALIGN_CENTER | wx.ALL, 10)
+        grid_sizer_4_copy.Add(self.label_5_copy_1_copy, 0, 0, 10)
+        grid_sizer_4_copy.Add(self.dyn_light_filepath_label, 0, 0, 10)
         sizer_6.Add(grid_sizer_4_copy, 1, 0, 0)
         sizer_22.Add(sizer_6, 1, 0, 0)
+        sizer_5_copy.Add(self.label_5_copy_1, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        sizer_5_copy.Add(self.unused, 0, wx.ALIGN_BOTTOM | wx.ALL, 10)
+        sizer_22.Add(sizer_5_copy, 1, 0, 0)
         sizer_dyn_light_main.Add(sizer_22, 1, wx.ALIGN_CENTER_HORIZONTAL | wx.EXPAND, 0)
         self.notebook_dyn_light.SetSizer(sizer_dyn_light_main)
         self.notebook_main.AddPage(self.notebook_1_pane_1, _("Main"))
@@ -389,6 +401,10 @@ class CCMainFrame(wx.Frame):
             self.StopThread()               #stop reader thread
             self.serial.close()             #disconnect serial
             self.button_connect_serial.SetLabel("Connect") # set button to connect
+            # set background back to default gray
+            self.dataFrame.SetBackgroundColour('LIGHT GREY')
+            self.reference_values_measured  = False
+            self.resetReactorData()
             return
         else:
             try:
@@ -412,11 +428,12 @@ class CCMainFrame(wx.Frame):
     def OnOpenLogfileDialogButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
         """select log file to store data in"""
         dirname = ""
-        dlg = wx.FileDialog(self, "Choose a Log File", dirname, "", "*.*", wx.OPEN)
+        dlg     = wx.FileDialog(self, "Choose a Log File", dirname, "", "*.*", wx.OPEN)
+        f = None
         if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetFilename()
-            dirname = dlg.GetDirectory()
-            f = os.path.join(dirname, filename)
+            filename    = dlg.GetFilename()
+            dirname     = dlg.GetDirectory()
+            f           = os.path.join(dirname, filename)
         dlg.Destroy()
         if f:
             self.label_active_log_file.SetLabel(f)
@@ -431,11 +448,12 @@ class CCMainFrame(wx.Frame):
         """load dynamic light program from csv file"""
         # select file to read
         dirname = ''
-        dlg = wx.FileDialog(self, "Choose dynamic light definition file", dirname, "", "CSV files (*.txt;*.csv)|*.txt;*.csv", wx.OPEN)
+        dlg     = wx.FileDialog(self, "Choose dynamic light definition file", dirname, "", "CSV files (*.txt;*.csv)|*.txt;*.csv", wx.OPEN)
+        fp      = None
         if dlg.ShowModal() == wx.ID_OK:
-            filename = dlg.GetFilename()
-            dirname = dlg.GetDirectory()
-            fp = os.path.join(dirname, filename)
+            filename    = dlg.GetFilename()
+            dirname     = dlg.GetDirectory()
+            fp          = os.path.join(dirname, filename)
         dlg.Destroy()
         # abort if no file selected
         if not fp:
@@ -493,7 +511,9 @@ class CCMainFrame(wx.Frame):
         for i in range(0,self.numChambers):
             offset = i * self.numChambers
             for j in range(0,self.numLeds):
-                self.referenceVals1[i][j] = float(values[j+offset])
+                self.referenceVals1[i][j]   = float(values[j+offset])
+        self.dataFrame.ref_values_measured_value.SetLabel(str(datetime.now().strftime('%H/%M/%S/%d/%m/%Y')))
+        self.reference_values_measured      = True
         self.updateReactorData()
 
     def digestReactorModeValues(self, dataSections):
@@ -583,6 +603,7 @@ class CCMainFrame(wx.Frame):
         values              = dataSections[1].split(",")
         self.numChambers    = int(values[0])
         self.numLeds        = int(values[1])
+        refValsMeasured     = values[2]
         
         self.dataStore      = None
         # initalize data arrays
@@ -622,6 +643,15 @@ class CCMainFrame(wx.Frame):
             self.dyn_light_ch_select_combo_box.Append(str(i))
         self.dyn_light_ch_select_combo_box.SetSelection(0)
 
+        # show number of chambers and OD channels in the Gui
+        self.dataFrame.num_chambers_value.SetLabel(str(self.numChambers))
+        self.dataFrame.num_leds_value.SetLabel(str(self.numLeds))
+        
+        # indicate if reactor has already reference values
+        if len(refValsMeasured):
+            self.dataFrame.ref_values_measured_value.SetLabel(refValsMeasured)
+            self.reference_values_measured      = True
+        
         # initialize the data store: assemble list of variable names
         self.VARIABLE_NAMES = ['Time'] + [cn + '_ch' + str(i) for i in range(0,self.numChambers) for cn in CHANNEL_NAMES[0:self.numLeds] ]
         self.VARIABLE_NAMES = self.VARIABLE_NAMES + ['bg_ch' + str(i) for i in range(0,self.numChambers)]
@@ -635,7 +665,7 @@ class CCMainFrame(wx.Frame):
     def logData(self, data):
         """write sample to log file"""
         # check if logging to file is activated, otherwise do nothing...
-        if not self.logging_active_button.GetValue():
+        if not self.logging_active:
             return
         ls = self.assmebleLogString(str(x) for x in data)
         self.writeToLog(ls)
@@ -666,13 +696,35 @@ class CCMainFrame(wx.Frame):
         self.dataFrame.temp_label.SetLabel(str(','.join([str(s) for s in self.temp])))
         # brightness
         self.dataFrame.bgt_label.SetLabel(str(','.join([str(s) for s in self.lightBrightness]))) 
-        # sample temperature
+        # sample time
         self.dataFrame.time_label.SetLabel(str(self.sampleTime))
 
         self.notebook_1_pane_1.text_ctrl_min_led_bght.SetValue(str(','.join([str(s) for s in self.minLight])))
         self.notebook_1_pane_1.text_ctrl_max_led_bght.SetValue(str(','.join([str(s) for s in self.maxLight])))
         self.notebook_1_pane_1.text_ctrl_sampling_rate.SetValue(str(self.sampleRate))
 
+    def resetReactorData(self):
+        "clear previous values from reactor data panel upon disconnect"
+        # show data in gui
+        for i in range(0,self.numChambers):
+            offset = i * self.numChambers
+            for j in range(0,self.numLeds):
+                self.reference_val_data_labels[i][j].SetLabel("")
+        for j in range(0,self.numLeds):
+            self.od_val_data_labels[j].SetLabel("")
+
+        # background values for detector
+        self.dataFrame.background_od_label.SetLabel("")
+        # sample temperature
+        self.dataFrame.temp_label.SetLabel("")
+        # brightness
+        self.dataFrame.bgt_label.SetLabel("") 
+        # sample time
+        self.dataFrame.time_label.SetLabel("")
+
+        self.notebook_1_pane_1.text_ctrl_min_led_bght.SetValue("")
+        self.notebook_1_pane_1.text_ctrl_max_led_bght.SetValue("")
+        self.notebook_1_pane_1.text_ctrl_sampling_rate.SetValue("")
         
     def sendMessage(self, param, value):
         """commits message to the reactor, first the parameter name then the value(s)"""
@@ -700,14 +752,22 @@ class CCMainFrame(wx.Frame):
         on activation the headerline with parameter names is added to the log file"""
         if not self.serial.isOpen() or self.dataStore == None:
             msgbox = wx.MessageBox('Need to connect reactor and start sampling before logging can be activated!', 
-                                   'Alert', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+                                   'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
             # deactivate logging again
+            self.logging_active_button.SetLabel("Activate Logging")
+            self.logging_active = False
             self.logging_active_button.SetValue(False)
             return
-        if not self.logging_active_button.GetValue():
-            return
-        logHeader = '#' + ','.join(self.VARIABLE_NAMES)  + "\n"
-        self.writeToLog(logHeader)
+        if self.logging_active:
+            self.logging_active_button.SetLabel("Activate Logging")
+            self.logging_active = False
+            self.logging_active_button.SetValue(False)
+        else:
+            self.logging_active_button.SetLabel("Deactivate Logging")
+            self.logging_active_button.SetValue(False)
+            logHeader = '#' + ','.join(self.VARIABLE_NAMES)  + "\n"
+            self.logging_active = True
+            self.writeToLog(logHeader)
 
 # end of class CCMainFrame
 

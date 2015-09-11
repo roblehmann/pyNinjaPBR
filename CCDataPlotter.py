@@ -218,6 +218,10 @@ class GraphFrame(wx.Frame):
         # sliding window effect. therefore, xmin is assigned after
         # xmax.
         #
+        if not self.dataStore:
+            msgbox = wx.MessageBox('No data available to redraw!', 
+                                   'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            return
         x = self.dataStore.getData(self.variableToPlot)
         x_brightness = self.dataStore.getData("Brightness")
         x_temp = self.dataStore.getData("temp_ch0")
@@ -283,9 +287,13 @@ class GraphFrame(wx.Frame):
     
     def on_select_var_button(self, event):
         """select variable to plot"""
+        if not self.dataStore:
+            print "No data to plot"
+            msgbox = wx.MessageBox('No data available to plot!', 
+                                   'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            return
         varNames = sorted(self.dataStore.data.keys())
         varNames.remove("Time")
-        varNames.remove("Brightness")
         dlg = wx.SingleChoiceDialog(self, "Select OD to plot", "...",varNames, wx.CHOICEDLG_STYLE)
 
         if dlg.ShowModal() == wx.ID_OK:
@@ -300,6 +308,8 @@ class GraphFrame(wx.Frame):
         
     def on_clear_button(self, event):
         """clear plot by removing all data from datastore"""
+        if not self.dataStore:
+            return
         self.dataStore.clear()
         self.draw_plot()
         

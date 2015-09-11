@@ -28,6 +28,12 @@ class CCDataFrame(wx.Frame):
         self.bgt_label = wx.StaticText(self, wx.ID_ANY, _("-"))
         self.Background = wx.StaticText(self, wx.ID_ANY, _("Background"))
         self.background_od_label = wx.StaticText(self, wx.ID_ANY, _("-"))
+        self.num_chambers_label = wx.StaticText(self, wx.ID_ANY, _("Reactor Chambers"))
+        self.num_chambers_value = wx.StaticText(self, wx.ID_ANY, _("-"))
+        self.num_leds_label = wx.StaticText(self, wx.ID_ANY, _("OD Channels"))
+        self.num_leds_value = wx.StaticText(self, wx.ID_ANY, _("-"))
+        self.ref_values_measured_label = wx.StaticText(self, wx.ID_ANY, _("Reference Values Measured"))
+        self.ref_values_measured_value = wx.StaticText(self, wx.ID_ANY, _("-"))
         self.OD_led1_label = wx.StaticText(self, wx.ID_ANY, _("OD Led1"))
         self.OD_value_led1_label = wx.StaticText(self, wx.ID_ANY, _("-"))
         self.OD_led2_label = wx.StaticText(self, wx.ID_ANY, _("OD Led2"))
@@ -48,7 +54,7 @@ class CCDataFrame(wx.Frame):
     def __set_properties(self):
         # begin wxGlade: CCDataFrame.__set_properties
         self.SetTitle(_("Captor Sample Data"))
-        self.SetSize((730, 160))
+        self.SetSize((732, 231))
         self.label_2.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         # end wxGlade
 
@@ -58,7 +64,7 @@ class CCDataFrame(wx.Frame):
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
         grid_sizer_3 = wx.GridSizer(5, 2, 0, 0)
-        grid_sizer_1 = wx.GridSizer(4, 2, 0, 0)
+        grid_sizer_1 = wx.GridSizer(7, 2, 0, 0)
         sizer_4.Add(self.label_2, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         grid_sizer_1.Add(self.label_1, 0, 0, 0)
         grid_sizer_1.Add(self.time_label, 0, 0, 0)
@@ -68,6 +74,12 @@ class CCDataFrame(wx.Frame):
         grid_sizer_1.Add(self.bgt_label, 0, 0, 0)
         grid_sizer_1.Add(self.Background, 0, 0, 0)
         grid_sizer_1.Add(self.background_od_label, 0, 0, 0)
+        grid_sizer_1.Add(self.num_chambers_label, 0, 0, 0)
+        grid_sizer_1.Add(self.num_chambers_value, 0, 0, 0)
+        grid_sizer_1.Add(self.num_leds_label, 0, 0, 0)
+        grid_sizer_1.Add(self.num_leds_value, 0, 0, 0)
+        grid_sizer_1.Add(self.ref_values_measured_label, 0, 0, 0)
+        grid_sizer_1.Add(self.ref_values_measured_value, 0, 0, 0)
         sizer_2.Add(grid_sizer_1, 1, wx.EXPAND, 0)
         grid_sizer_3.Add(self.OD_led1_label, 0, 0, 0)
         grid_sizer_3.Add(self.OD_value_led1_label, 0, 0, 0)

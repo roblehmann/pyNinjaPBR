@@ -19,37 +19,26 @@ class captorControlNotebook(wx.Panel):
         wx.Panel.__init__(self, *args, **kwds)
         self.label_6 = wx.StaticText(self, wx.ID_ANY, _("Captor Control"))
         self.mode_radio_box = wx.RadioBox(self, wx.ID_ANY, _("Reactor Mode"), choices=[_("Standby"), _("Light"), _("Dark"), _("Dynamic Light"), _("Error")], majorDimension=0, style=wx.RA_SPECIFY_ROWS)
-        self.label_4_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Minimal Led Brightness (>=0)"))
-        self.text_ctrl_min_led_bght = wx.TextCtrl(self, wx.ID_ANY, _("0"), style=wx.TE_PROCESS_ENTER)
-        self.label_5_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Maximal Led Brightness (<=255)"))
-        self.text_ctrl_max_led_bght = wx.TextCtrl(self, wx.ID_ANY, _("255"), style=wx.TE_PROCESS_ENTER)
-        self.label_6_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Sampling Rate (sec)"))
-        self.text_ctrl_sampling_rate = wx.TextCtrl(self, wx.ID_ANY, _("10"), style=wx.TE_PROCESS_ENTER)
         self.button_odPlot = wx.Button(self, wx.ID_ANY, _("OD Curve Display"))
         self.label_7 = wx.StaticText(self, wx.ID_ANY, _("Scheduled Reactor Mode"))
         self.mode_schedule_combo_box = wx.ComboBox(self, wx.ID_ANY, choices=[_("Standby"), _("Light"), _("Dark"), _("Dynamic Light"), _("Error")], style=wx.CB_DROPDOWN)
         self.label_8 = wx.StaticText(self, wx.ID_ANY, _("Change Time"))
         self.text_ctrl_mode_change_time = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_PROCESS_ENTER)
-        self.button_turbidostat_mode = wx.ToggleButton(self, wx.ID_ANY, _("Turbidostat Mode"))
-        self.label_1_copy_1_copy = wx.StaticText(self, wx.ID_ANY, _("Upper Threshold"), style=wx.ALIGN_CENTER)
-        self.text_ctrl_turbido_upper_thr = wx.TextCtrl(self, wx.ID_ANY, _("1"), style=wx.TE_PROCESS_ENTER)
-        self.label_2_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Lower Threshold"), style=wx.ALIGN_CENTER)
-        self.text_ctrl_turbido_lower_thr = wx.TextCtrl(self, wx.ID_ANY, _("0.8"), style=wx.TE_PROCESS_ENTER)
-        self.label_3_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Dilution Step Length (sec)"), style=wx.ALIGN_CENTER)
-        self.text_ctrl_turbido_dilution_len = wx.TextCtrl(self, wx.ID_ANY, _("5"), style=wx.TE_PROCESS_ENTER)
+        self.label_1_copy_1_copy = wx.StaticText(self, wx.ID_ANY, _("Minimal Led Brightness (>=0)"), style=wx.ALIGN_CENTER)
+        self.text_ctrl_min_led_bght = wx.TextCtrl(self, wx.ID_ANY, _("0"), style=wx.TE_PROCESS_ENTER)
+        self.label_2_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Maximal Led Brightness (<=255)"), style=wx.ALIGN_CENTER)
+        self.text_ctrl_max_led_bght = wx.TextCtrl(self, wx.ID_ANY, _("255"), style=wx.TE_PROCESS_ENTER)
+        self.label_3_copy_copy = wx.StaticText(self, wx.ID_ANY, _("Sampling Rate (sec)"), style=wx.ALIGN_CENTER)
+        self.text_ctrl_sampling_rate = wx.TextCtrl(self, wx.ID_ANY, _("10"), style=wx.TE_PROCESS_ENTER)
 
         self.__set_properties()
         self.__do_layout()
 
         self.Bind(wx.EVT_RADIOBOX, self.ReactorModeChangeRadioButton, self.mode_radio_box)
+        self.Bind(wx.EVT_BUTTON, self.OnOdCurvePlotClicked, self.button_odPlot)
         self.Bind(wx.EVT_TEXT_ENTER, self.OnMinBghtEntered, self.text_ctrl_min_led_bght)
         self.Bind(wx.EVT_TEXT_ENTER, self.OnMaxBghtEntered, self.text_ctrl_max_led_bght)
         self.Bind(wx.EVT_TEXT_ENTER, self.OnSampleRateEntered, self.text_ctrl_sampling_rate)
-        self.Bind(wx.EVT_BUTTON, self.OnOdCurvePlotClicked, self.button_odPlot)
-        self.Bind(wx.EVT_TOGGLEBUTTON, self.OnTurbidostatButtonClicked, self.button_turbidostat_mode)
-        self.Bind(wx.EVT_TEXT_ENTER, self.OnTBDUpperThrsEntered, self.text_ctrl_turbido_upper_thr)
-        self.Bind(wx.EVT_TEXT_ENTER, self.OnTBDLowerThrsEntered, self.text_ctrl_turbido_lower_thr)
-        self.Bind(wx.EVT_TEXT_ENTER, self.OnDilutionDurEntered, self.text_ctrl_turbido_dilution_len)
         # end wxGlade
 
     def __set_properties(self):
@@ -57,15 +46,10 @@ class captorControlNotebook(wx.Panel):
         self.label_6.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.mode_radio_box.SetToolTipString(_("Available reactor operation modes"))
         self.mode_radio_box.SetSelection(0)
-        self.text_ctrl_min_led_bght.SetToolTipString(_("Minimal Brightness"))
-        self.text_ctrl_max_led_bght.SetToolTipString(_("Maximal brightness value"))
-        self.text_ctrl_sampling_rate.SetToolTipString(_("Duration between OD samples in seconds"))
         self.button_odPlot.SetToolTipString(_("Open plot of available OD values "))
         self.mode_schedule_combo_box.SetToolTipString(_("Select which mode to switch into"))
         self.mode_schedule_combo_box.SetSelection(-1)
         self.text_ctrl_mode_change_time.SetToolTipString(_("Time to switch mode specified above"))
-        self.button_turbidostat_mode.SetMinSize((140, 20))
-        self.button_turbidostat_mode.SetToolTipString(_("Toogle turbidotat mode"))
         # end wxGlade
 
     def __do_layout(self):
@@ -78,12 +62,6 @@ class captorControlNotebook(wx.Panel):
         sizer_light_general = wx.BoxSizer(wx.VERTICAL)
         sizer_main_main.Add(self.label_6, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_mode_light.Add(self.mode_radio_box, 0, wx.ALIGN_CENTER | wx.SHAPED, 0)
-        sizer_light_general.Add(self.label_4_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_light_general.Add(self.text_ctrl_min_led_bght, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_light_general.Add(self.label_5_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_light_general.Add(self.text_ctrl_max_led_bght, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
-        sizer_light_general.Add(self.label_6_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_light_general.Add(self.text_ctrl_sampling_rate, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_light_general.Add(self.button_odPlot, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         sizer_mode_light.Add(sizer_light_general, 1, wx.EXPAND, 0)
         sizer_main_content.Add(sizer_mode_light, 1, wx.EXPAND, 0)
@@ -92,13 +70,12 @@ class captorControlNotebook(wx.Panel):
         sizer_13.Add(self.label_8, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
         sizer_13.Add(self.text_ctrl_mode_change_time, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_main_content.Add(sizer_13, 1, wx.EXPAND, 0)
-        sizer_14.Add(self.button_turbidostat_mode, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
         sizer_14.Add(self.label_1_copy_1_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_14.Add(self.text_ctrl_turbido_upper_thr, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_14.Add(self.text_ctrl_min_led_bght, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_14.Add(self.label_2_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_14.Add(self.text_ctrl_turbido_lower_thr, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_14.Add(self.text_ctrl_max_led_bght, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_14.Add(self.label_3_copy_copy, 0, wx.ALIGN_CENTER_HORIZONTAL | wx.ALL, 10)
-        sizer_14.Add(self.text_ctrl_turbido_dilution_len, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
+        sizer_14.Add(self.text_ctrl_sampling_rate, 0, wx.ALIGN_CENTER_HORIZONTAL, 0)
         sizer_main_content.Add(sizer_14, 1, wx.EXPAND, 0)
         sizer_main_main.Add(sizer_main_content, 1, wx.EXPAND, 0)
         self.SetSizer(sizer_main_main)
@@ -108,7 +85,17 @@ class captorControlNotebook(wx.Panel):
 
     def ReactorModeChangeRadioButton(self, event):  # wxGlade: captorControlNotebook.<event_handler>
         newMode = str(self.mode_radio_box.GetSelection())
-        self.GetParent().GetParent().sendMessage("md",str(newMode))
+        if not self.GetParent().GetParent().serial.isOpen():
+            self.mode_radio_box.SetSelection(0)
+            msgbox = wx.MessageBox('Not connected to reactor!', 
+                                   'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+        else:
+            if int(newMode) > 0 and not self.GetParent().GetParent().reference_values_measured:
+                msgbox = wx.MessageBox('Reference values not measured before - OD values will be invalid!', 
+                                       'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            self.GetParent().GetParent().sendMessage("md",str(newMode))
+            # set background color in data frame according to current mode
+            self.GetParent().GetParent().dataFrame.SetBackgroundColour(self.GetParent().GetParent().mode_bg_cols[int(newMode)])
 
     def OnTurbidostatButtonClicked(self, event):  # wxGlade: captorControlNotebook.<event_handler>
         if self.button_turbidostat_mode.GetValue():
