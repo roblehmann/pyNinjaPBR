@@ -1,4 +1,5 @@
 *.pyc
 *.py~
+*.wxg~
 *.txt
 .DS_Store
