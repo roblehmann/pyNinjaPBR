@@ -64,9 +64,9 @@ class BoundControlBox(wx.Panel):
 
 
 class GraphFrame(wx.Frame):
-    """ The Curve Plotter Frame of the Captor Interface
+    """ The Curve Plotter Frame of the NinjaPBR Interface
     """
-    title = 'Captor OD Monitor'
+    title = 'NinjaPBR OD Monitor'
     
     def __init__(self,parent, dataStore, variableToPlot=None):
         wx.Frame.__init__(self, parent, -1, self.title)

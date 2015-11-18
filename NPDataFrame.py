@@ -11,15 +11,15 @@ import wx
 # end wxGlade
 
 
-class CCDataFrame(wx.Frame):
-    """ The Current Sample Display Frame of the Captor Interface. 
+class NPDataFrame(wx.Frame):
+    """ The Current Sample Display Frame of the NinjaPBR Interface. 
     Holds only static text showing the last sample's parameters.
     """
     def __init__(self, *args, **kwds):
-        # begin wxGlade: CCDataFrame.__init__
+        # begin wxGlade: NPDataFrame.__init__
         kwds["style"] = wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.label_2 = wx.StaticText(self, wx.ID_ANY, _("Captor Sample Data"))
+        self.label_2 = wx.StaticText(self, wx.ID_ANY, _("NinjaPBR Sample Data"))
         self.label_1 = wx.StaticText(self, wx.ID_ANY, _("Sample Time"))
         self.time_label = wx.StaticText(self, wx.ID_ANY, _("-"))
         self.label_1_copy_1 = wx.StaticText(self, wx.ID_ANY, _("Sample Temperature"))
@@ -52,14 +52,14 @@ class CCDataFrame(wx.Frame):
         self.mainFrame = None
 
     def __set_properties(self):
-        # begin wxGlade: CCDataFrame.__set_properties
-        self.SetTitle(_("Captor Sample Data"))
+        # begin wxGlade: NPDataFrame.__set_properties
+        self.SetTitle(_("NinjaPBR Sample Data"))
         self.SetSize((732, 231))
         self.label_2.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         # end wxGlade
 
     def __do_layout(self):
-        # begin wxGlade: CCDataFrame.__do_layout
+        # begin wxGlade: NPDataFrame.__do_layout
         sizer_3 = wx.BoxSizer(wx.VERTICAL)
         sizer_4 = wx.BoxSizer(wx.VERTICAL)
         sizer_2 = wx.BoxSizer(wx.HORIZONTAL)
@@ -106,4 +106,4 @@ class CCDataFrame(wx.Frame):
         """Called on frame close."""
         self.mainFrame.dataFrame = None # tell mainframe that window is closed
         self.Destroy()
-# end of class CCDataFrame
+# end of class NPDataFrame

@@ -4,7 +4,7 @@
 #
 
 import wx
-from CCDataPlotter import GraphFrame
+from NPDataPlotter import GraphFrame
 # begin wxGlade: dependencies
 # end wxGlade
 
@@ -12,12 +12,12 @@ from CCDataPlotter import GraphFrame
 # end wxGlade
 
 
-class captorControlNotebook(wx.Panel):
+class npControlNotebook(wx.Panel):
     def __init__(self, *args, **kwds):
-        # begin wxGlade: captorControlNotebook.__init__
+        # begin wxGlade: npControlNotebook.__init__
         kwds["style"] = wx.TAB_TRAVERSAL
         wx.Panel.__init__(self, *args, **kwds)
-        self.label_6 = wx.StaticText(self, wx.ID_ANY, _("Captor Control"))
+        self.label_6 = wx.StaticText(self, wx.ID_ANY, _("NinjaPBR Control"))
         self.mode_radio_box = wx.RadioBox(self, wx.ID_ANY, _("Reactor Mode"), choices=[_("Standby"), _("Light"), _("Dark"), _("Dynamic Light"), _("Error")], majorDimension=0, style=wx.RA_SPECIFY_ROWS)
         self.button_odPlot = wx.Button(self, wx.ID_ANY, _("OD Curve Display"))
         self.label_7 = wx.StaticText(self, wx.ID_ANY, _("Scheduled Reactor Mode"))
@@ -42,7 +42,7 @@ class captorControlNotebook(wx.Panel):
         # end wxGlade
 
     def __set_properties(self):
-        # begin wxGlade: captorControlNotebook.__set_properties
+        # begin wxGlade: npControlNotebook.__set_properties
         self.label_6.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.mode_radio_box.SetToolTipString(_("Available reactor operation modes"))
         self.mode_radio_box.SetSelection(0)
@@ -53,7 +53,7 @@ class captorControlNotebook(wx.Panel):
         # end wxGlade
 
     def __do_layout(self):
-        # begin wxGlade: captorControlNotebook.__do_layout
+        # begin wxGlade: npControlNotebook.__do_layout
         sizer_main_main = wx.BoxSizer(wx.VERTICAL)
         sizer_main_content = wx.BoxSizer(wx.HORIZONTAL)
         sizer_14 = wx.BoxSizer(wx.VERTICAL)
@@ -83,7 +83,7 @@ class captorControlNotebook(wx.Panel):
         self.Layout()
         # end wxGlade
 
-    def ReactorModeChangeRadioButton(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def ReactorModeChangeRadioButton(self, event):  # wxGlade: npControlNotebook.<event_handler>
         newMode = str(self.mode_radio_box.GetSelection())
         if not self.GetParent().GetParent().serial.isOpen():
             self.mode_radio_box.SetSelection(0)
@@ -97,31 +97,31 @@ class captorControlNotebook(wx.Panel):
             # set background color in data frame according to current mode
             self.GetParent().GetParent().dataFrame.SetBackgroundColour(self.GetParent().GetParent().mode_bg_cols[int(newMode)])
 
-    def OnTurbidostatButtonClicked(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnTurbidostatButtonClicked(self, event):  # wxGlade: npControlNotebook.<event_handler>
         if self.button_turbidostat_mode.GetValue():
             self.GetParent().GetParent().sendMessage("it","1") # activate turbidostat
         else:
             self.GetParent().GetParent().sendMessage("it","0") # DEactivate turbidostat
 
-    def OnMinBghtEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnMinBghtEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("milb",str(self.text_ctrl_min_led_bght.GetValue()))
         
-    def OnMaxBghtEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnMaxBghtEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("malb",str(self.text_ctrl_max_led_bght.GetValue()))
         
-    def OnSampleRateEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnSampleRateEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("sst",str(self.text_ctrl_sampling_rate.GetValue()))
         
-    def OnTBDUpperThrsEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnTBDUpperThrsEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("uot",str(self.text_ctrl_turbido_upper_thr.GetValue()))
         
-    def OnTBDLowerThrsEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnTBDLowerThrsEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("lot",str(self.text_ctrl_turbido_lower_thr.GetValue()))
         
-    def OnDilutionDurEntered(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnDilutionDurEntered(self, event):  # wxGlade: npControlNotebook.<event_handler>
         self.GetParent().GetParent().sendMessage("dd",str(self.text_ctrl_turbido_dilution_len.GetValue()))
         
-    def OnOdCurvePlotClicked(self, event):  # wxGlade: captorControlNotebook.<event_handler>
+    def OnOdCurvePlotClicked(self, event):  # wxGlade: npControlNotebook.<event_handler>
         # show od curve plot if window not already open
         if self.GetParent().GetParent().odCurveFrame == None:
             plotFrame = GraphFrame(self.GetParent().GetParent(), self.GetParent().GetParent().dataStore, None)
@@ -131,4 +131,4 @@ class captorControlNotebook(wx.Panel):
         else:
             if DEBUG:
                 print "OD curve plot already open..."
-# end of class captorControlNotebook
+# end of class npControlNotebook

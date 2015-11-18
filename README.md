@@ -1,4 +1,4 @@
-pyCaptor
+pyNinjaPBR
 ========
 
-Graphical User-interface for the cyanobacterial Arduino-based photobioreactor (CAPTOR), based on wxPython.
+Graphical User-interface for the NinjaPBR, based on wxPython.
