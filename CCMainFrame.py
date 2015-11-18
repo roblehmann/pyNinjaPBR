@@ -14,6 +14,7 @@ import sys
 import threading
 import wx
 import ConfigParser
+import time
 # begin wxGlade: dependencies
 from captorControlNotebook import captorControlNotebook
 # end wxGlade
@@ -27,6 +28,7 @@ from captorControlNotebook import captorControlNotebook
 # access the GUI without crashing. wxMutexGuiEnter/wxMutexGuiLeave
 # could be used too, but an event is more elegant.
 
+# TODO: deal with different channels in dynamic light program properly
 
 SERIALRX        = wx.NewEventType()
 # bind to serial data receive events
@@ -79,7 +81,7 @@ class CCMainFrame(wx.Frame):
         self.sampleTime     = 0
         self.reference_values_measured  = False
         # dynamic light program definition
-        self.dynLight = None
+        self.dynLight = [[(0,0)]*maxDynLightLen, [(0,0)]*maxDynLightLen, [(0,0)]*maxDynLightLen]
         # frame showing a plot of the profile
         self.dynLightPlotFrame = None
         # frame showing real time plot of OD curve
@@ -107,6 +109,7 @@ class CCMainFrame(wx.Frame):
         self.button_select_logfile = wx.Button(self.notebook_logging, wx.ID_ANY, _("Select Logfile"))
         self.label_active_log_file = wx.StaticText(self.notebook_logging, wx.ID_ANY, _("./log.txt"))
         self.logging_active_button = wx.ToggleButton(self.notebook_logging, wx.ID_ANY, _("Activate Logging"))
+        self.button_download_reactor_log = wx.Button(self.notebook_logging, wx.ID_ANY, _("Download Data into Logfile"))
         self.notebook_reference_values = wx.Panel(self.notebook_main, wx.ID_ANY)
         self.label_1_copy_copy_copy = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Captor Control"))
         self.label_12 = wx.StaticText(self.notebook_reference_values, wx.ID_ANY, _("Reference Value Measurement"))
@@ -162,6 +165,7 @@ class CCMainFrame(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnOpenRefreshReactorListButton, self.button_refresh_serial_copy)
         self.Bind(wx.EVT_BUTTON, self.OnOpenLogfileDialogButton, self.button_select_logfile)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivateLoggingButtonClicked, self.logging_active_button)
+        self.Bind(wx.EVT_BUTTON, self.OnDownloadReactorLogButton, self.button_download_reactor_log)
         self.Bind(wx.EVT_BUTTON, self.OnOpenMeasureRefValsButton, self.button_measure_refs)
         self.Bind(wx.EVT_BUTTON, self.OnOpenDynLightFileDialogButton, self.button_ld_dynlght_copy_copy_copy)
         self.Bind(wx.EVT_BUTTON, self.OnOpenUploadDynLightButton, self.button_uld_dynlght_copy_copy)
@@ -201,6 +205,7 @@ class CCMainFrame(wx.Frame):
         self.label_11.SetFont(wx.Font(20, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.button_select_logfile.SetToolTipString(_("File which stores data permanently"))
         self.logging_active_button.SetToolTipString(_("Activate to start writing data to Log File"))
+        self.button_download_reactor_log.SetToolTipString(_("File which stores data permanently"))
         self.label_1_copy_copy_copy.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL, 0, "Lucida Grande"))
         self.button_measure_refs.SetMinSize((200, 20))
         self.button_measure_refs.SetToolTipString(_("Reference OD of culture chamber and medium only"))
@@ -253,6 +258,7 @@ class CCMainFrame(wx.Frame):
         sizer_20.Add(self.button_select_logfile, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         sizer_20.Add(self.label_active_log_file, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         sizer_20.Add(self.logging_active_button, 0, wx.ALIGN_CENTER, 0)
+        sizer_20.Add(self.button_download_reactor_log, 0, wx.ALIGN_CENTER | wx.ALL, 10)
         sizer_19.Add(sizer_20, 1, wx.EXPAND, 0)
         sizer_logging_main.Add(sizer_19, 1, wx.EXPAND, 0)
         self.notebook_logging.SetSizer(sizer_logging_main)
@@ -361,7 +367,7 @@ class CCMainFrame(wx.Frame):
         text = event.data
         dataSections = text.split(";")
         if DEBUG:
-            print "received reactor message: " + text
+                print "received reactor message: " + text
         
         # reference values
         if dataSections[0] == "ERROR": 
@@ -409,7 +415,7 @@ class CCMainFrame(wx.Frame):
         else:
             try:
                 self.serial.port = self.serial_connection_combo_box.GetValue()
-                self.serial.baudrate = 9600
+                self.serial.baudrate = 19200
                 self.serial.open()
             except serial.SerialException, e:
                 dlg = wx.MessageDialog(None, str(e), "Serial Port Error", wx.OK | wx.ICON_ERROR)
@@ -461,15 +467,17 @@ class CCMainFrame(wx.Frame):
         
         with open(fp, 'r') as f:
             content = f.readlines()
+        # init
+        self.dynLight = [[(0,0)]*maxDynLightLen, [(0,0)]*maxDynLightLen, [(0,0)]*maxDynLightLen]
         
-        self.dynLight = []
         for l in content:
             if not l.startswith("#"):
                 item = [long(x) for x in l.split(",")]
-                if not (item[0] < 0 or item[1] < 0):
-                    self.dynLight.append(item)
+                print item
+                # if not (item[0] < 0 or item[1] < 0):
+                self.dynLight[int(item[0])-1][int(item[1])] = (item[2],item[3])
         if DEBUG:
-            print "Parsed dynamic light program from " + fp + " (rows " + str(len(self.dynLight)) + ")..."
+            print "Parsed dynamic light program from " + fp + ")..."
         self.dyn_light_filepath_label.SetLabel(fp)
     
     def OnOpenUploadDynLightButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
@@ -477,15 +485,12 @@ class CCMainFrame(wx.Frame):
         if self.dynLight == None:
             print "No dynamic light program loaded!"
             return
-        chamber_idx = self.dyn_light_ch_select_combo_box.GetValue()
-        for i,item in enumerate(self.dynLight):
+        chamber_idx = int(self.dyn_light_ch_select_combo_box.GetValue())
+        for i,item in enumerate(self.dynLight[chamber_idx]):
             self.sendMessage("bp",str(chamber_idx) + msgSep + str(i) + msgSep + str(item[0]) + msgSep + str(item[1]) + msgSep)
 
-        # if dynamic light program is shorter that te max. length, there might be remaining 
-        # entries from the old program in the reactors memory, which need to be overwritten
-        if len(self.dynLight) < maxDynLightLen:
-            for i in range(len(self.dynLight), maxDynLightLen+1):
-                self.sendMessage("bp",str(chamber_idx) + msgSep + str(i) + msgSep + '0' + msgSep + '0' + msgSep)
+        # for i in range(0,maxDynLightLen):
+        #     self.sendMessage("bp",str(chamber_idx) + msgSep + str(i) + msgSep + str(self.dynLight[chamber_idx][i][0]) + msgSep + str(self.dynLight[chamber_idx][i][1]) + msgSep)
             
 
     def OnOpenDownloadDynLightButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
@@ -493,7 +498,6 @@ class CCMainFrame(wx.Frame):
         """
         # TODO: implement parsing the reactor reply
         chamber_idx = str(self.dyn_light_ch_select_combo_box.GetValue())
-        print chamber_idx
         self.sendMessage("sbp",chamber_idx)
 
     def OnShowDynLightClicked(self, event):  # wxGlade: CCMainFrame.<event_handler>
@@ -768,6 +772,19 @@ class CCMainFrame(wx.Frame):
             logHeader = '#' + ','.join(self.VARIABLE_NAMES)  + "\n"
             self.logging_active = True
             self.writeToLog(logHeader)
+
+    def OnDownloadReactorLogButton(self, event):  # wxGlade: CCMainFrame.<event_handler>
+        """ request from reactor to send all data from current log
+        """
+        if not self.serial.isOpen() or self.dataStore == None:
+            msgbox = wx.MessageBox('Not connect to reactor!', 
+                               'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            return
+        if not self.logging_active:
+            msgbox = wx.MessageBox('Logging must be activated for download!', 
+                               'Warning', wx.ICON_EXCLAMATION | wx.STAY_ON_TOP)
+            return
+        self.sendMessage("log","")
 
 # end of class CCMainFrame
 

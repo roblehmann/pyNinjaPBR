@@ -43,8 +43,10 @@ class DynLightPlotFrame(wx.Frame):
         # self.draw()
 
     def draw(self):
-        bght    = [x for (x,y) in self.dynLight]
-        dur     = cumsum([y  for (x,y) in self.dynLight])
+        chamber = int(self.GetParent().dyn_light_ch_select_combo_box.GetValue())
+        print self.dynLight[chamber]
+        bght    = [x for (x,y) in self.dynLight[chamber]]
+        dur     = cumsum([y  for (x,y) in self.dynLight[chamber]])
         self.axes.clear()
         self.axes.plot(dur, bght)
         self.axes.set_xlabel("Time (s)")
