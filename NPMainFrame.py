@@ -434,7 +434,7 @@ class NPMainFrame(wx.Frame):
     def OnOpenLogfileDialogButton(self, event):  # wxGlade: NPMainFrame.<event_handler>
         """select log file to store data in"""
         dirname = ""
-        dlg     = wx.FileDialog(self, "Choose a Log File", dirname, "", "*.*", wx.OPEN)
+        dlg     = wx.FileDialog(self, "Choose a Log File", dirname, "", "*.*", wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         f = None
         if dlg.ShowModal() == wx.ID_OK:
             filename    = dlg.GetFilename()
