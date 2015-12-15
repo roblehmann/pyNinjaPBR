@@ -513,7 +513,7 @@ class NPMainFrame(wx.Frame):
         self.referenceVals1 = [[0] * self.numLeds for i in range(self.numChambers)]
         # store ref data
         for i in range(0,self.numChambers):
-            offset = i * self.numChambers
+            offset = i * self.numLeds
             for j in range(0,self.numLeds):
                 self.referenceVals1[i][j]   = float(values[j+offset])
         self.dataFrame.ref_values_measured_value.SetLabel(str(datetime.now().strftime('%H/%M/%S/%d/%m/%Y')))
@@ -608,6 +608,12 @@ class NPMainFrame(wx.Frame):
         self.numChambers    = int(values[0])
         self.numLeds        = int(values[1])
         refValsMeasured     = values[2]
+        
+        # set reactor mode to current value
+        newMode = int(values[3])
+        if DEBUG:
+            print "detected reactor mode change to:" + str(newMode)
+        self.notebook_1_pane_1.mode_radio_box.SetSelection(newMode)
         
         self.dataStore      = None
         # initalize data arrays
